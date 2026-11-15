@@ -148,7 +148,7 @@ export const ListSourcesResponse = zod.object({
   "connectorScopes": zod.array(zod.string()),
   "secretReference": zod.string().describe('Vault reference only; never a credential value.'),
   "reviewNote": zod.string().nullish(),
-  "manualUseAllowed": zod.boolean().describe('True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector.'),
+  "ingestionAllowed": zod.boolean().describe('True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })),
@@ -223,7 +223,7 @@ export const CreateSourceResponse = zod.object({
   "connectorScopes": zod.array(zod.string()),
   "secretReference": zod.string().describe('Vault reference only; never a credential value.'),
   "reviewNote": zod.string().nullish(),
-  "manualUseAllowed": zod.boolean().describe('True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector.'),
+  "ingestionAllowed": zod.boolean().describe('True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -262,7 +262,7 @@ export const GetSourceResponse = zod.object({
   "connectorScopes": zod.array(zod.string()),
   "secretReference": zod.string().describe('Vault reference only; never a credential value.'),
   "reviewNote": zod.string().nullish(),
-  "manualUseAllowed": zod.boolean().describe('True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector.'),
+  "ingestionAllowed": zod.boolean().describe('True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -330,7 +330,7 @@ export const UpdateSourceResponse = zod.object({
   "connectorScopes": zod.array(zod.string()),
   "secretReference": zod.string().describe('Vault reference only; never a credential value.'),
   "reviewNote": zod.string().nullish(),
-  "manualUseAllowed": zod.boolean().describe('True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector.'),
+  "ingestionAllowed": zod.boolean().describe('True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -379,7 +379,7 @@ export const ReviewSourceResponse = zod.object({
   "connectorScopes": zod.array(zod.string()),
   "secretReference": zod.string().describe('Vault reference only; never a credential value.'),
   "reviewNote": zod.string().nullish(),
-  "manualUseAllowed": zod.boolean().describe('True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector.'),
+  "ingestionAllowed": zod.boolean().describe('True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -1355,7 +1355,7 @@ export const downloadWorkbookQueryScopeDefault = `all`;
 export const downloadWorkbookQueryIncludeRestrictedDefault = false;
 
 export const DownloadWorkbookQueryParams = zod.object({
-  "scope": zod.enum(['all', 'sources', 'evidence', 'sites', 'events', 'bettors', 'trust', 'audit']).default(downloadWorkbookQueryScopeDefault),
+  "scope": zod.enum(['all', 'sources', 'evidence', 'sites', 'entities', 'events', 'bettors', 'trust', 'audit']).default(downloadWorkbookQueryScopeDefault),
   "includeRestricted": zod.coerce.boolean().default(downloadWorkbookQueryIncludeRestrictedDefault)
 })
 

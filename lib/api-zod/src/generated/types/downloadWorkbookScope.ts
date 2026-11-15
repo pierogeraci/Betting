@@ -14,6 +14,7 @@ export const DownloadWorkbookScope = {
   sources: 'sources',
   evidence: 'evidence',
   sites: 'sites',
+  entities: 'entities',
   events: 'events',
   bettors: 'bettors',
   trust: 'trust',

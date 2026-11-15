@@ -39,8 +39,8 @@ export interface Source {
   secretReference: string;
   /** @nullable */
   reviewNote?: string | null;
-  /** True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector. */
-  manualUseAllowed: boolean;
+  /** True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector. */
+  ingestionAllowed: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

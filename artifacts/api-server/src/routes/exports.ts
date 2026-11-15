@@ -51,15 +51,12 @@ function addSheet(
     to: { row: 1, column: Math.max(headers.length, 1) },
   };
   sheet.getRow(1).font = { bold: true };
-  sheet.columns.forEach((column) => {
+  sheet.columns.forEach((column, index) => {
+    const values = sheet.getColumn(index + 1).values.slice(1, 18);
     column.width = Math.min(
       Math.max(
         14,
-        ...sheet
-          .getColumn(column.key as string)
-          .values
-          .slice(1, 18)
-          .map((value) => String(value ?? "").length + 2),
+        ...values.map((value) => String(value ?? "").length + 2),
       ),
       48,
     );
@@ -115,7 +112,7 @@ router.get(
       ["Legal entities", entities.length],
       ["Sports events", events.length],
       ["Trust score calculations", scores.length],
-      ["Bettor profiles", bettors.length],
+      ["Bettor profiles", includeRestricted ? bettors.length : "Not included (restricted)"],
       ["Data policy", "Manual inputs and authorized sources only; credentials are never exported."],
       ["Scoring status", "Provisional; validate/calibrate before operational use."],
     ]);
@@ -212,7 +209,7 @@ router.get(
         row.actorId, row.createdAt,
       ]));
     }
-    if (scope === "all" || scope === "trust") {
+    if (scope === "all" || scope === "trust" || scope === "events") {
       addSheet(workbook, "Methodology", ["Item", "Definition"], [
         ["Vulnerability score", "Sum of binary vulnerability indicators multiplied by their approved prototype weights; range 0–20."],
         ...trustFactorDefinitions.map((factor) => [factor.label, `Weight ${factor.weight}`]),
@@ -223,6 +220,8 @@ router.get(
         ["Win rate", "Low < 25%; medium >= 25% and < 50%; high >= 50%."],
         ["Trust Index", "Average of vulnerabilityScore/20*100 and (threatScore-3)/6*100."],
         ["Trust Index bands", "Low < 33; medium >= 33 and < 67; high >= 67."],
+        ["Event rating", "Separate provisional heuristic: limited odds-source count (<3) adds 1; unusual odds adds 2; volume >= €10,000 adds 1 and >= €50,000 adds 2. Low 0–1; medium 2–3; high >= 4."],
+        ["Event rating limitation", "A prototype rule only; it is not an established fraud probability and requires calibration against authorized historical data."],
         ["Calibration", trustCalibrationNotice],
         ["Source permission", "A source record or review is not legal advice or a grant of access rights."],
         ["Privacy", "No credential values or direct bettor identity fields are included."],

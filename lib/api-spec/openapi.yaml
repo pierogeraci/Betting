@@ -661,7 +661,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [all, sources, evidence, sites, events, bettors, trust, audit]
+            enum: [all, sources, evidence, sites, entities, events, bettors, trust, audit]
             default: all
         - name: includeRestricted
           in: query

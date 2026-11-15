@@ -176,8 +176,8 @@ export interface Source {
   secretReference: string;
   /** @nullable */
   reviewNote?: string | null;
-  /** True when the source has current approved authorization for manual evidence referencing. It does not indicate an automated connector. */
-  manualUseAllowed: boolean;
+  /** True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector. */
+  ingestionAllowed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -970,6 +970,7 @@ export const DownloadWorkbookScope = {
   sources: 'sources',
   evidence: 'evidence',
   sites: 'sites',
+  entities: 'entities',
   events: 'events',
   bettors: 'bettors',
   trust: 'trust',
