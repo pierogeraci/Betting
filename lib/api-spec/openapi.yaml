@@ -1,22 +1,40 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CTI Gambling Intelligence API — manual and authorized-source prototype.
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: workspace
+    description: Dashboard, current user and audit activity
+  - name: sources
+    description: Source registry and authorization review
+  - name: evidence
+    description: Manual evidence intake, classification and normalization
+  - name: sites
+    description: Betting-site profiles and analyst-confirmed entity links
+  - name: entities
+    description: Legal entities and candidate associations
+  - name: events
+    description: Sports event fraud-risk assessment
+  - name: bettors
+    description: Restricted, authorized or synthetic bettor profiles
+  - name: trust
+    description: Provisional Trust Index calculation
+  - name: exports
+    description: Excel workbook extraction
+  - name: storage
+    description: Private evidence and authorization-document uploads
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +42,1290 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /session:
+    get:
+      operationId: getSession
+      tags: [workspace]
+      summary: Get the authenticated user's application role
+      responses:
+        "200":
+          description: Current application identity
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [workspace]
+      summary: Get dashboard totals and risk breakdowns
+      responses:
+        "200":
+          description: Workspace summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /activity:
+    get:
+      operationId: listActivity
+      tags: [workspace]
+      summary: List recent audit activity
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Recent activity records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityList"
+  /users:
+    get:
+      operationId: listUsers
+      tags: [workspace]
+      summary: List workspace members and assigned roles
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /users/{userId}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [workspace]
+      summary: Assign a workspace role
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRoleUpdate"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceUser"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sources:
+    get:
+      operationId: listSources
+      tags: [sources]
+      summary: Search and filter registered sources
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: legalStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/SourceLegalStatus"
+        - name: connectorStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/ConnectorStatus"
+      responses:
+        "200":
+          description: Source registry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceList"
+    post:
+      operationId: createSource
+      tags: [sources]
+      summary: Register an authorized-source candidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceInput"
+      responses:
+        "201":
+          description: Source registered in draft state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /sources/{id}:
+    get:
+      operationId: getSource
+      tags: [sources]
+      summary: Get source authorization details
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Source record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateSource
+      tags: [sources]
+      summary: Update a source while retaining its review state
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceUpdate"
+      responses:
+        "200":
+          description: Updated source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sources/{id}/review:
+    post:
+      operationId: reviewSource
+      tags: [sources]
+      summary: Approve, reject, suspend or revoke source access
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceReview"
+      responses:
+        "200":
+          description: Review decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Source"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /evidence:
+    get:
+      operationId: listEvidence
+      tags: [evidence]
+      summary: Search and filter evidence records
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/EvidenceStatus"
+      responses:
+        "200":
+          description: Evidence records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvidenceList"
+    post:
+      operationId: createEvidence
+      tags: [evidence]
+      summary: Capture evidence manually or from an approved source
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceInput"
+      responses:
+        "201":
+          description: Evidence captured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /evidence/{id}:
+    get:
+      operationId: getEvidence
+      tags: [evidence]
+      summary: Get an evidence record
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Evidence record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateEvidence
+      tags: [evidence]
+      summary: Update extraction, normalization or enrichment fields
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceUpdate"
+      responses:
+        "200":
+          description: Updated evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /evidence/{id}/classify:
+    post:
+      operationId: classifyEvidence
+      tags: [evidence]
+      summary: Save analyst-reviewed classification and normalized fields
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceClassification"
+      responses:
+        "200":
+          description: Classification saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sites:
+    get:
+      operationId: listSites
+      tags: [sites]
+      summary: Search and filter betting-site profiles
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: riskBand
+          in: query
+          schema:
+            $ref: "#/components/schemas/RiskBand"
+      responses:
+        "200":
+          description: Betting sites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteList"
+    post:
+      operationId: createSite
+      tags: [sites]
+      summary: Create a betting-site record from authorized evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteInput"
+      responses:
+        "201":
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /sites/{id}:
+    get:
+      operationId: getSite
+      tags: [sites]
+      summary: Get a betting-site profile
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Site profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateSite
+      tags: [sites]
+      summary: Update site profile fields
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteUpdate"
+      responses:
+        "200":
+          description: Updated site
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sites/{id}/profile:
+    get:
+      operationId: getSiteProfile
+      tags: [sites]
+      summary: Get combined site profile, evidence and latest scores
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Combined analyst profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteProfile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sites/{id}/entity-link:
+    post:
+      operationId: linkSiteEntity
+      tags: [sites]
+      summary: Confirm an analyst-reviewed legal-entity association
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityLinkInput"
+      responses:
+        "200":
+          description: Association recorded with analyst decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /entities:
+    get:
+      operationId: listEntities
+      tags: [entities]
+      summary: Search legal-entity candidate records
+      parameters:
+        - $ref: "#/components/parameters/Search"
+      responses:
+        "200":
+          description: Legal entities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntityList"
+    post:
+      operationId: createEntity
+      tags: [entities]
+      summary: Create a legal-entity or person candidate record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityInput"
+      responses:
+        "201":
+          description: Candidate entity created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalEntity"
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: Search sports events and risk ratings
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - name: riskBand
+          in: query
+          schema:
+            $ref: "#/components/schemas/RiskBand"
+      responses:
+        "200":
+          description: Sports events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventList"
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Register a sports event for analyst assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventInput"
+      responses:
+        "201":
+          description: Event registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportsEvent"
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get sports-event details and rating inputs
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportsEvent"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update event market observations
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventUpdate"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportsEvent"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /events/{id}/rate:
+    post:
+      operationId: rateEvent
+      tags: [events]
+      summary: Calculate an event risk rating from supplied market data
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRatingInput"
+      responses:
+        "200":
+          description: Risk rating calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SportsEvent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /bettors:
+    get:
+      operationId: listBettors
+      tags: [bettors]
+      summary: Search restricted synthetic or authorized bettor profiles
+      parameters:
+        - $ref: "#/components/parameters/Search"
+      responses:
+        "200":
+          description: Pseudonymous bettor profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BettorList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      operationId: createBettor
+      tags: [bettors]
+      summary: Add an authorized or synthetic pseudonymous bettor profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BettorInput"
+      responses:
+        "201":
+          description: Pseudonymous profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BettorProfile"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /trust/matrix:
+    get:
+      operationId: getTrustMatrix
+      tags: [trust]
+      summary: Read the approved provisional scoring weights and thresholds
+      responses:
+        "200":
+          description: Scoring methodology
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustMatrix"
+  /trust/scores:
+    get:
+      operationId: listTrustScores
+      tags: [trust]
+      summary: List calculated site Trust Index scores
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trust Index results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustScoreList"
+  /trust/scores/calculate:
+    post:
+      operationId: calculateTrustScore
+      tags: [trust]
+      summary: Calculate vulnerability, threat and normalized Trust Index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrustCalculationInput"
+      responses:
+        "201":
+          description: Score calculated and saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrustScore"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /exports/xlsx:
+    get:
+      operationId: downloadWorkbook
+      tags: [exports]
+      summary: Download a multi-sheet Excel extraction
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [all, sources, evidence, sites, events, bettors, trust, audit]
+            default: all
+        - name: includeRestricted
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Excel workbook
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a private upload URL for an authorized evidence file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL and object path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /storage/public-objects/{filePath}:
+    get:
+      operationId: getPublicObject
+      tags: [storage]
+      summary: Serve a public asset from the configured public storage paths
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public object bytes
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
 components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    Search:
+      name: q
+      in: query
+      schema:
+        type: string
+        maxLength: 200
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+  responses:
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Unauthorized:
+      description: Sign-in required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Forbidden:
+      description: Role or authorization does not permit this operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    NotFound:
+      description: Record not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
-
+      required: [status]
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    RiskBand:
+      type: string
+      enum: [low, medium, high, unassessed]
+    SourceLegalStatus:
+      type: string
+      enum: [draft, in_review, approved, rejected, expired, revoked, suspended]
+    ConnectorStatus:
+      type: string
+      enum: [not_configured, connected, error, off]
+    EvidenceStatus:
+      type: string
+      enum: [new, classified, normalized, reviewed, archived]
+    WorkspaceRole:
+      type: string
+      enum: [admin, analyst, compliance_reviewer, restricted_analyst, read_only]
+    Session:
+      type: object
+      required: [authenticated, userId, displayName, role, accessState]
+      properties:
+        authenticated: { type: boolean }
+        userId: { type: string }
+        displayName: { type: string }
+        email: { type: ["string", "null"] }
+        role:
+          $ref: "#/components/schemas/WorkspaceRole"
+        accessState:
+          type: string
+          enum: [active, pending, disabled, setup_required]
+    WorkspaceUser:
+      type: object
+      required: [id, userId, displayName, role, status, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: string }
+        displayName: { type: string }
+        email: { type: ["string", "null"] }
+        role:
+          $ref: "#/components/schemas/WorkspaceRole"
+        status:
+          type: string
+          enum: [active, pending, disabled]
+        createdAt: { type: string, format: date-time }
+    UserList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/WorkspaceUser" } }
+        total: { type: integer }
+    UserRoleUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          $ref: "#/components/schemas/WorkspaceRole"
+    DashboardSummary:
+      type: object
+      required: [sourceCount, sourcesInReview, approvedSources, evidenceCount, unclassifiedEvidence, siteCount, highRiskSites, eventCount, highRiskEvents, restrictedBettorCount, generatedAt]
+      properties:
+        sourceCount: { type: integer }
+        sourcesInReview: { type: integer }
+        approvedSources: { type: integer }
+        evidenceCount: { type: integer }
+        unclassifiedEvidence: { type: integer }
+        siteCount: { type: integer }
+        highRiskSites: { type: integer }
+        eventCount: { type: integer }
+        highRiskEvents: { type: integer }
+        restrictedBettorCount: { type: integer }
+        generatedAt: { type: string, format: date-time }
+    Activity:
+      type: object
+      required: [id, action, entityType, entityLabel, actorLabel, createdAt]
+      properties:
+        id: { type: integer }
+        action: { type: string }
+        entityType: { type: string }
+        entityLabel: { type: string }
+        actorLabel: { type: string }
+        createdAt: { type: string, format: date-time }
+    ActivityList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+        total: { type: integer }
+    Source:
+      type: object
+      required: [id, name, provider, category, accessMethod, owner, purpose, scope, dataCategories, authorizationBasis, validFrom, legalStatus, connectorStatus, connectorScopes, secretReference, ingestionAllowed, createdAt, updatedAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        provider: { type: string }
+        url: { type: ["string", "null"] }
+        category: { type: string }
+        accessMethod: { type: string }
+        owner: { type: string }
+        purpose: { type: string }
+        scope: { type: string }
+        dataCategories: { type: array, items: { type: string } }
+        authorizationBasis: { type: string }
+        authorizationEvidenceName: { type: ["string", "null"] }
+        authorizationEvidencePath: { type: ["string", "null"] }
+        validFrom: { type: string, format: date }
+        validUntil: { type: ["string", "null"], format: date }
+        reviewerRole: { type: ["string", "null"] }
+        reviewerLabel: { type: ["string", "null"] }
+        legalStatus:
+          $ref: "#/components/schemas/SourceLegalStatus"
+        connectorStatus:
+          $ref: "#/components/schemas/ConnectorStatus"
+        connectorScopes: { type: array, items: { type: string } }
+        secretReference: { type: string, description: "Vault reference only; never a credential value." }
+        reviewNote: { type: ["string", "null"] }
+        ingestionAllowed: { type: boolean, description: "True only when current approved authorization permits manual evidence referencing. It does not indicate or enable an automated connector." }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SourceInput:
+      type: object
+      required: [name, provider, category, accessMethod, owner, purpose, scope, dataCategories, authorizationBasis, validFrom, connectorScopes]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        provider: { type: string, minLength: 1, maxLength: 160 }
+        url: { type: ["string", "null"], maxLength: 2048 }
+        category: { type: string, minLength: 1, maxLength: 100 }
+        accessMethod: { type: string, minLength: 1, maxLength: 100 }
+        owner: { type: string, minLength: 1, maxLength: 160 }
+        purpose: { type: string, minLength: 1, maxLength: 1000 }
+        scope: { type: string, minLength: 1, maxLength: 1000 }
+        dataCategories: { type: array, items: { type: string }, minItems: 1 }
+        authorizationBasis: { type: string, minLength: 1, maxLength: 1000 }
+        authorizationEvidenceName: { type: ["string", "null"] }
+        authorizationEvidencePath: { type: ["string", "null"] }
+        validFrom: { type: string, format: date }
+        validUntil: { type: ["string", "null"], format: date }
+        reviewerRole: { type: ["string", "null"] }
+        connectorScopes: { type: array, items: { type: string } }
+        secretReference: { type: string, default: "" }
+    SourceUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        provider: { type: string, minLength: 1, maxLength: 160 }
+        url: { type: ["string", "null"], maxLength: 2048 }
+        category: { type: string }
+        accessMethod: { type: string }
+        owner: { type: string }
+        purpose: { type: string }
+        scope: { type: string }
+        dataCategories: { type: array, items: { type: string } }
+        authorizationBasis: { type: string }
+        authorizationEvidenceName: { type: ["string", "null"] }
+        authorizationEvidencePath: { type: ["string", "null"] }
+        validFrom: { type: string, format: date }
+        validUntil: { type: ["string", "null"], format: date }
+        reviewerRole: { type: ["string", "null"] }
+        connectorStatus:
+          $ref: "#/components/schemas/ConnectorStatus"
+        connectorScopes: { type: array, items: { type: string } }
+        secretReference: { type: string }
+    SourceReview:
+      type: object
+      required: [decision, reason]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject, suspend, revoke]
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    SourceList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Source" } }
+        total: { type: integer }
+    Evidence:
+      type: object
+      required: [id, title, channel, sourceId, originalUrl, capturedAt, rawContent, categories, extractedFacts, normalizedFields, enrichmentNotes, status, relatedSiteId, eventId, entityId, attachmentName, attachmentPath, synthetic, createdAt]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        channel: { type: string }
+        sourceId: { type: ["integer", "null"] }
+        originalUrl: { type: ["string", "null"] }
+        capturedAt: { type: string, format: date-time }
+        rawContent: { type: string }
+        categories: { type: array, items: { type: string } }
+        extractedFacts: { type: object, additionalProperties: true }
+        normalizedFields: { type: object, additionalProperties: true }
+        enrichmentNotes: { type: string }
+        status:
+          $ref: "#/components/schemas/EvidenceStatus"
+        relatedSiteId: { type: ["integer", "null"] }
+        eventId: { type: ["integer", "null"] }
+        entityId: { type: ["integer", "null"] }
+        attachmentName: { type: ["string", "null"] }
+        attachmentPath: { type: ["string", "null"] }
+        synthetic: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    EvidenceInput:
+      type: object
+      required: [title, channel, capturedAt, rawContent]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 240 }
+        channel: { type: string, minLength: 1, maxLength: 80 }
+        sourceId: { type: ["integer", "null"] }
+        originalUrl: { type: ["string", "null"], maxLength: 2048 }
+        capturedAt: { type: string, format: date-time }
+        rawContent: { type: string, minLength: 1, maxLength: 20000 }
+        categories: { type: array, items: { type: string } }
+        extractedFacts: { type: object, additionalProperties: true }
+        relatedSiteId: { type: ["integer", "null"] }
+        eventId: { type: ["integer", "null"] }
+        entityId: { type: ["integer", "null"] }
+        attachmentName: { type: ["string", "null"] }
+        attachmentPath: { type: ["string", "null"] }
+        synthetic: { type: boolean, default: false }
+    EvidenceUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 240 }
+        channel: { type: string }
+        sourceId: { type: ["integer", "null"] }
+        originalUrl: { type: ["string", "null"] }
+        capturedAt: { type: string, format: date-time }
+        rawContent: { type: string, maxLength: 20000 }
+        categories: { type: array, items: { type: string } }
+        extractedFacts: { type: object, additionalProperties: true }
+        normalizedFields: { type: object, additionalProperties: true }
+        enrichmentNotes: { type: string }
+        status:
+          $ref: "#/components/schemas/EvidenceStatus"
+        relatedSiteId: { type: ["integer", "null"] }
+        eventId: { type: ["integer", "null"] }
+        entityId: { type: ["integer", "null"] }
+        attachmentName: { type: ["string", "null"] }
+        attachmentPath: { type: ["string", "null"] }
+        synthetic: { type: boolean }
+    EvidenceClassification:
+      type: object
+      required: [categories, extractedFacts, normalizedFields, enrichmentNotes, status]
+      properties:
+        categories: { type: array, items: { type: string }, minItems: 1 }
+        extractedFacts: { type: object, additionalProperties: true }
+        normalizedFields: { type: object, additionalProperties: true }
+        enrichmentNotes: { type: string }
+        status:
+          type: string
+          enum: [classified, normalized, reviewed]
+        relatedSiteId: { type: ["integer", "null"] }
+        eventId: { type: ["integer", "null"] }
+        entityId: { type: ["integer", "null"] }
+    EvidenceList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Evidence" } }
+        total: { type: integer }
+    Site:
+      type: object
+      required: [id, domain, name, description, firstSeenAt, lastSeenAt, jurisdiction, licenseClaim, legalEntityId, entityLinkStatus, evidenceCount, riskBand, trustIndex, createdAt]
+      properties:
+        id: { type: integer }
+        domain: { type: string }
+        name: { type: string }
+        description: { type: string }
+        firstSeenAt: { type: ["string", "null"], format: date-time }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+        jurisdiction: { type: string }
+        licenseClaim: { type: string }
+        legalEntityId: { type: ["integer", "null"] }
+        entityLinkStatus:
+          type: string
+          enum: [unlinked, candidate, analyst_confirmed, rejected]
+        evidenceCount: { type: integer }
+        riskBand:
+          $ref: "#/components/schemas/RiskBand"
+        trustIndex: { type: ["number", "null"], minimum: 0, maximum: 100 }
+        createdAt: { type: string, format: date-time }
+    SiteInput:
+      type: object
+      required: [domain, name]
+      properties:
+        domain: { type: string, minLength: 1, maxLength: 255 }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: string }
+        firstSeenAt: { type: ["string", "null"], format: date-time }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+        jurisdiction: { type: string }
+        licenseClaim: { type: string }
+    SiteUpdate:
+      type: object
+      properties:
+        domain: { type: string, minLength: 1, maxLength: 255 }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: string }
+        firstSeenAt: { type: ["string", "null"], format: date-time }
+        lastSeenAt: { type: ["string", "null"], format: date-time }
+        jurisdiction: { type: string }
+        licenseClaim: { type: string }
+    SiteList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Site" } }
+        total: { type: integer }
+    SiteProfile:
+      type: object
+      required: [site, evidence, latestTrustScore, linkedEntity]
+      properties:
+        site: { $ref: "#/components/schemas/Site" }
+        evidence: { type: array, items: { $ref: "#/components/schemas/Evidence" } }
+        latestTrustScore: { type: ["object", "null"], additionalProperties: true }
+        linkedEntity: { type: ["object", "null"], additionalProperties: true }
+    LegalEntity:
+      type: object
+      required: [id, name, entityType, country, registrationId, evidenceNotes, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        entityType:
+          type: string
+          enum: [company, person, unknown]
+        country: { type: string }
+        registrationId: { type: string }
+        evidenceNotes: { type: string }
+        createdAt: { type: string, format: date-time }
+    EntityInput:
+      type: object
+      required: [name, entityType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 240 }
+        entityType:
+          type: string
+          enum: [company, person, unknown]
+        country: { type: string }
+        registrationId: { type: string }
+        evidenceNotes: { type: string }
+    EntityList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/LegalEntity" } }
+        total: { type: integer }
+    EntityLinkInput:
+      type: object
+      required: [legalEntityId, decision, rationale]
+      properties:
+        legalEntityId: { type: integer }
+        decision:
+          type: string
+          enum: [confirm, reject, candidate]
+        rationale: { type: string, minLength: 3, maxLength: 1000 }
+    SportsEvent:
+      type: object
+      required: [id, sport, competition, home, away, startsAt, oddsSources, marketVolume, unusualOdds, riskBand, ratingNote, synthetic, createdAt]
+      properties:
+        id: { type: integer }
+        sport: { type: string }
+        competition: { type: string }
+        home: { type: string }
+        away: { type: string }
+        startsAt: { type: string, format: date-time }
+        oddsSources: { type: integer }
+        marketVolume: { type: ["number", "null"] }
+        unusualOdds: { type: ["boolean", "null"] }
+        riskBand:
+          $ref: "#/components/schemas/RiskBand"
+        ratingNote: { type: string }
+        synthetic: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    EventInput:
+      type: object
+      required: [sport, competition, home, away, startsAt]
+      properties:
+        sport: { type: string, minLength: 1 }
+        competition: { type: string, minLength: 1 }
+        home: { type: string, minLength: 1 }
+        away: { type: string, minLength: 1 }
+        startsAt: { type: string, format: date-time }
+        oddsSources: { type: integer, minimum: 0, default: 0 }
+        marketVolume: { type: ["number", "null"], minimum: 0 }
+        unusualOdds: { type: ["boolean", "null"] }
+        ratingNote: { type: string }
+        synthetic: { type: boolean, default: false }
+    EventUpdate:
+      type: object
+      properties:
+        sport: { type: string }
+        competition: { type: string }
+        home: { type: string }
+        away: { type: string }
+        startsAt: { type: string, format: date-time }
+        oddsSources: { type: integer, minimum: 0 }
+        marketVolume: { type: ["number", "null"], minimum: 0 }
+        unusualOdds: { type: ["boolean", "null"] }
+        ratingNote: { type: string }
+        synthetic: { type: boolean }
+    EventRatingInput:
+      type: object
+      required: [oddsSources, marketVolume, unusualOdds, rationale, dataBasis]
+      properties:
+        oddsSources: { type: integer, minimum: 1 }
+        marketVolume: { type: number, minimum: 0 }
+        unusualOdds: { type: boolean }
+        rationale: { type: string, minLength: 3, maxLength: 1000 }
+        dataBasis: { type: string, minLength: 1, maxLength: 500 }
+    EventList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/SportsEvent" } }
+        total: { type: integer }
+    BettorProfile:
+      type: object
+      required: [id, pseudonymousId, operator, periodStart, periodEnd, averageBet, grossWinnings, winRate, dataBasis, synthetic, riskNote, createdAt]
+      properties:
+        id: { type: integer }
+        pseudonymousId: { type: string }
+        operator: { type: string }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        averageBet: { type: number, minimum: 0 }
+        grossWinnings: { type: number, minimum: 0 }
+        winRate: { type: number, minimum: 0, maximum: 1 }
+        dataBasis: { type: string }
+        synthetic: { type: boolean }
+        riskNote: { type: string }
+        createdAt: { type: string, format: date-time }
+    BettorInput:
+      type: object
+      required: [pseudonymousId, operator, periodStart, periodEnd, averageBet, grossWinnings, winRate, dataBasis, synthetic]
+      properties:
+        pseudonymousId: { type: string, minLength: 1, maxLength: 100 }
+        operator: { type: string, minLength: 1, maxLength: 160 }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        averageBet: { type: number, minimum: 0 }
+        grossWinnings: { type: number, minimum: 0 }
+        winRate: { type: number, minimum: 0, maximum: 1 }
+        dataBasis: { type: string, minLength: 1, maxLength: 500 }
+        synthetic: { type: boolean }
+        riskNote: { type: string }
+    BettorList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/BettorProfile" } }
+        total: { type: integer }
+    VulnerabilityFactor:
+      type: object
+      required: [key, present]
+      properties:
+        key:
+          type: string
+          enum: [multiple_accounts, eu_bank_payment, no_registration, no_identity_documents, third_party_provider, crypto_payment_or_betting, offshore_bank_account]
+        present: { type: boolean }
+    ThreatMetrics:
+      type: object
+      required: [averageBet, grossWinnings, winRate]
+      properties:
+        averageBet: { type: number, minimum: 0 }
+        grossWinnings: { type: number, minimum: 0 }
+        winRate: { type: number, minimum: 0, maximum: 1 }
+    TrustMatrix:
+      type: object
+      required: [vulnerabilityFactors, vulnerabilityBands, threatBands, trustIndexBands, calibrationNotice]
+      properties:
+        vulnerabilityFactors: { type: array, items: { $ref: "#/components/schemas/TrustFactorDefinition" } }
+        vulnerabilityBands: { type: array, items: { $ref: "#/components/schemas/ScoreBand" } }
+        threatBands: { type: array, items: { $ref: "#/components/schemas/ScoreBand" } }
+        trustIndexBands: { type: array, items: { $ref: "#/components/schemas/ScoreBand" } }
+        calibrationNotice: { type: string }
+    TrustFactorDefinition:
+      type: object
+      required: [key, label, weight]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        weight: { type: integer }
+    ScoreBand:
+      type: object
+      required: [label, min, max]
+      properties:
+        label: { type: string }
+        min: { type: number }
+        max: { type: ["number", "null"] }
+    TrustCalculationInput:
+      type: object
+      required: [siteId, vulnerabilityFactors, threatMetrics, analystNote]
+      properties:
+        siteId: { type: integer }
+        vulnerabilityFactors: { type: array, items: { $ref: "#/components/schemas/VulnerabilityFactor" }, minItems: 7, maxItems: 7 }
+        threatMetrics: { $ref: "#/components/schemas/ThreatMetrics" }
+        analystNote: { type: string, maxLength: 1000 }
+    TrustScore:
+      type: object
+      required: [id, siteId, vulnerabilityScore, vulnerabilityBand, threatScore, threatBand, normalizedVulnerability, normalizedThreat, trustIndex, trustBand, factorDetails, threatDetails, analystNote, calibrationNotice, computedAt]
+      properties:
+        id: { type: integer }
+        siteId: { type: integer }
+        vulnerabilityScore: { type: number }
+        vulnerabilityBand:
+          $ref: "#/components/schemas/RiskBand"
+        threatScore: { type: integer }
+        threatBand:
+          $ref: "#/components/schemas/RiskBand"
+        normalizedVulnerability: { type: number }
+        normalizedThreat: { type: number }
+        trustIndex: { type: number, minimum: 0, maximum: 100 }
+        trustBand:
+          $ref: "#/components/schemas/RiskBand"
+        factorDetails: { type: array, items: { $ref: "#/components/schemas/TrustFactorResult" } }
+        threatDetails: { type: object, additionalProperties: true }
+        analystNote: { type: string }
+        calibrationNotice: { type: string }
+        computedAt: { type: string, format: date-time }
+    TrustFactorResult:
+      type: object
+      required: [key, label, weight, present, points]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        weight: { type: integer }
+        present: { type: boolean }
+        points: { type: integer }
+    TrustScoreList:
+      type: object
+      required: [items, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/TrustScore" } }
+        total: { type: integer }
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType, purpose]
+      properties:
+        name: { type: string, minLength: 1 }
+        size: { type: integer, minimum: 1 }
+        contentType: { type: string, minLength: 1 }
+        purpose:
+          type: string
+          enum: [evidence, authorization]
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath, expiresAt]
+      properties:
+        uploadURL: { type: string, format: uri }
+        objectPath: { type: string }
+        expiresAt: { type: string, format: date-time }

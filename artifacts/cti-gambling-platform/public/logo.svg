@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 176 48" fill="none">
+  <rect x="1" y="1" width="46" height="46" rx="10" fill="#263544"/>
+  <path d="M24 9.5 37 14v9.7c0 8.1-5.1 12.7-13 15.8-7.9-3.1-13-7.7-13-15.8V14l13-4.5Z" stroke="#E7D59D" stroke-width="2"/>
+  <path d="m18.4 23.9 3.8 3.7 7.7-8" stroke="#BBD0BE" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="58" y="23" fill="#27313C" font-family="DM Sans, sans-serif" font-size="14" font-weight="700" letter-spacing="1.8">CTI</text>
+  <text x="58" y="37" fill="#6C7E70" font-family="DM Mono, monospace" font-size="8" letter-spacing="1.25">INTELLIGENCE</text>
+</svg>

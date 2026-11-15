@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CTI Gambling Intelligence"
+description = "Web platform prototype for managing authorized intelligence sources, collecting and classifying evidence, profiling betting sites and events, calculating provisional trust and fraud indicators, and exporting case data to Excel."
+version = "1.0.0"
+id = "artifacts/cti-gambling-platform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18855
+
+[services.development]
+run = "pnpm --filter @workspace/cti-gambling-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cti-gambling-platform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cti-gambling-platform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18855"
+BASE_PATH = "/"

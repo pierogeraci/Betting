@@ -1,0 +1,32 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "a-UQQUWOGRR9kz8LshHr2"
+uri = "file://.local/conversation-workspace/files/Prototipo_Trust_Index_CTI_Gambling_2020.xlsx"
+type = "table"
+title = "Prototipo Excel Trust Index"
+description = "Prototipo Excel funzionante con estrazione del processo CTI 2020, registri casi/evidenze, calcolo minaccia, vulnerabilità e Trust Index. Include i dati demo originali e note sulle discrepanze metodologiche."
+logical_id = "8110ee5c-5c2d-487f-aad5-f934c5d82531"
+content_hash = "sha256:3fa24539e877193da08df2fd3d5a812f1d310949063c55cb2bcfb8467de86e10"
+size = 46061
+mtime_ms = 1794763310079
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/conversation:3d3929e4-1694-44ce-80ad-ac251fe6e334/8110ee5c-5c2d-487f-aad5-f934c5d82531/dff370ba-d00b-4f06-8a7e-3eb0c9d54445"
+storage_version_token = "1794763319482259"
+content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+source_uri = "file://Prototipo_Trust_Index_CTI_Gambling_2020.xlsx"
+
+[[outputs]]
+id = "XWzCUPK4v7CXYT8u1UZiB"
+uri = "file://.local/conversation-workspace/files/Specifica_Funzionale_Piattaforma_CTI_Trust_Index.docx"
+type = "word_document"
+title = "Specifica funzionale CTI — versione 1.5"
+description = "Aggiunto il piano dettagliato in 21 passi, con fasi, dipendenze, deliverable e criteri di uscita per MVP, estrazione assistita, connettori autorizzati, rating eventi, entity resolution, analisi utenti e Android."
+logical_id = "37a18212-d98d-467e-99ea-e4a6fff15ec3"
+content_hash = "sha256:4b5eed66a7f62391f1cf7a10383c753e8aa2c13fbcc918a4cbec78c5ffce4800"
+size = 69380
+mtime_ms = 1794765373211
+storage_uri = "gcs://replit-rams-assets-picard/rams/assets/conversation:3d3929e4-1694-44ce-80ad-ac251fe6e334/37a18212-d98d-467e-99ea-e4a6fff15ec3/22e90f05-3ec0-4c3c-ab0f-92f3753e8c54"
+storage_version_token = "1794765384032103"
+content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+source_uri = "file://Specifica_Funzionale_Piattaforma_CTI_Trust_Index.docx"
