@@ -1,0 +1,24 @@
+# Segreti e configurazione locale
+.env
+.env.*
+!.env.example
+*.session
+*.session-journal
+.claude/settings.local.json
+
+# Dati raccolti: restano nell'archivio, non nel repository
+data/
+storage/
+snapshots/
+*.apk
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Modelli scaricati
+models/
