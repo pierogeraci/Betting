@@ -371,6 +371,10 @@ button { cursor:pointer; }
 .app-frame { min-height:100dvh; background:#f5f3ed; display:flex; color:var(--ink); }
 .sidebar { width:240px; flex:0 0 240px; min-height:100dvh; background:#263544; color:#d8ded9; padding:24px 14px 14px; display:flex; flex-direction:column; position:sticky; top:0; height:100dvh; z-index:40; }
 .sidebar-brand { padding:0 10px 22px; border-bottom:1px solid rgba(229,231,221,.12); }
+.softstrategy-brand { display:flex; flex-direction:column; align-items:center; gap:8px; padding:12px 10px; margin:0 0 18px; border-radius:8px; background:#fff; color:#1c3157; }
+.softstrategy-brand img { display:block; width:176px; max-width:100%; height:auto; }
+.softstrategy-brand span { font-size:9px; text-align:center; line-height:1.4; }
+.softstrategy-brand:focus-visible { outline:3px solid #5ce1e6; outline-offset:3px; }
 .workspace-switch { display:flex; gap:10px; align-items:center; padding:14px 10px 17px; border-bottom:1px solid rgba(229,231,221,.12); }
 .workspace-symbol { display:grid; place-items:center; width:31px;height:31px;border-radius:7px;background:#d9c68e;color:#364b49;font:500 10px var(--mono); }
 .workspace-switch>div:nth-child(2) { display:grid; gap:3px; flex:1; }
