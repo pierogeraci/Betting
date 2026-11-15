@@ -2,8 +2,17 @@ import { createRoot } from 'react-dom/client';
 
 import App from './App';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { traduci } from '@/lib/italiano';
 
 import './index.css';
+
+const browserAlert = window.alert.bind(window);
+const browserConfirm = window.confirm.bind(window);
+const browserPrompt = window.prompt.bind(window);
+window.alert = (message?: unknown) => browserAlert(traduci(String(message ?? '')));
+window.confirm = (message?: string) => browserConfirm(traduci(message ?? ''));
+window.prompt = (message?: string, defaultValue?: string) =>
+  browserPrompt(traduci(message ?? ''), defaultValue);
 
 createRoot(document.getElementById('root')!, {
   // Keeps caught errors off reportError(), which would raise the dev overlay.

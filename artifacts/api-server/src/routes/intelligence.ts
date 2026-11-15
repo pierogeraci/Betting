@@ -209,7 +209,7 @@ router.post(
       .values({
         ...input,
         capturedAt: new Date(input.capturedAt),
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .returning();
     await recordActivity(req, "Captured evidence", "evidence", created.id, created.title);
@@ -337,7 +337,7 @@ router.post(
         domain,
         firstSeenAt: parsed.data.firstSeenAt ? new Date(parsed.data.firstSeenAt) : null,
         lastSeenAt: parsed.data.lastSeenAt ? new Date(parsed.data.lastSeenAt) : null,
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .onConflictDoNothing({ target: ctiSitesTable.domain })
       .returning();
@@ -508,7 +508,7 @@ router.post(
     }
     const [created] = await db
       .insert(ctiEntitiesTable)
-      .values({ ...parsed.data, createdBy: req.ctiUser!.clerkUserId })
+      .values({ ...parsed.data, createdBy: "anonymous" })
       .returning();
     await recordActivity(req, "Created legal-entity candidate", "entity", created.id, created.name);
     res.status(201).json(
@@ -560,7 +560,7 @@ router.post(
         startsAt: new Date(parsed.data.startsAt),
         marketVolume:
           parsed.data.marketVolume == null ? null : String(parsed.data.marketVolume),
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .returning();
     await recordActivity(req, "Registered sports event", "event", created.id, `${created.home} - ${created.away}`);
@@ -688,7 +688,7 @@ router.post(
         winRate: String(parsed.data.winRate),
         periodStart: toSqlDate(parsed.data.periodStart)!,
         periodEnd: toSqlDate(parsed.data.periodEnd)!,
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .returning();
     await recordActivity(req, "Added pseudonymous bettor profile", "bettor", created.id, created.pseudonymousId);
@@ -770,7 +770,7 @@ router.post(
         normalizedThreat: String(calculated.normalizedThreat),
         trustIndex: String(calculated.trustIndex),
         analystNote: input.analystNote,
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .returning();
     await db

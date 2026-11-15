@@ -17,19 +17,6 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * @summary Get the authenticated user's application role
- */
-export const GetSessionResponse = zod.object({
-  "authenticated": zod.boolean(),
-  "userId": zod.string(),
-  "displayName": zod.string(),
-  "email": zod.string().nullish(),
-  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),
-  "accessState": zod.enum(['active', 'pending', 'disabled', 'setup_required'])
-})
-
-
-/**
  * @summary Get dashboard totals and risk breakdowns
  */
 export const GetDashboardSummaryResponse = zod.object({
@@ -69,45 +56,6 @@ export const ListActivityResponse = zod.object({
   "createdAt": zod.coerce.date()
 })),
   "total": zod.number().int()
-})
-
-
-/**
- * @summary List workspace members and assigned roles
- */
-export const ListUsersResponse = zod.object({
-  "items": zod.array(zod.object({
-  "id": zod.number().int(),
-  "userId": zod.string(),
-  "displayName": zod.string(),
-  "email": zod.string().nullish(),
-  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),
-  "status": zod.enum(['active', 'pending', 'disabled']),
-  "createdAt": zod.coerce.date()
-})),
-  "total": zod.number().int()
-})
-
-
-/**
- * @summary Assign a workspace role
- */
-export const UpdateUserRoleParams = zod.object({
-  "userId": zod.coerce.number().int()
-})
-
-export const UpdateUserRoleBody = zod.object({
-  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only'])
-})
-
-export const UpdateUserRoleResponse = zod.object({
-  "id": zod.number().int(),
-  "userId": zod.string(),
-  "displayName": zod.string(),
-  "email": zod.string().nullish(),
-  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),
-  "status": zod.enum(['active', 'pending', 'disabled']),
-  "createdAt": zod.coerce.date()
 })
 
 

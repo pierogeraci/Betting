@@ -1,0 +1,1 @@
+- [Lingua e accesso della piattaforma](cti-language-access.md) — l’interfaccia CTI deve restare in italiano e non richiedere autenticazione.

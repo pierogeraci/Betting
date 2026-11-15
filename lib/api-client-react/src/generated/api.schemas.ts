@@ -68,55 +68,6 @@ export const WorkspaceRole = {
   read_only: 'read_only',
 } as const;
 
-export type SessionAccessState = typeof SessionAccessState[keyof typeof SessionAccessState];
-
-
-export const SessionAccessState = {
-  active: 'active',
-  pending: 'pending',
-  disabled: 'disabled',
-  setup_required: 'setup_required',
-} as const;
-
-export interface Session {
-  authenticated: boolean;
-  userId: string;
-  displayName: string;
-  /** @nullable */
-  email?: string | null;
-  role: WorkspaceRole;
-  accessState: SessionAccessState;
-}
-
-export type WorkspaceUserStatus = typeof WorkspaceUserStatus[keyof typeof WorkspaceUserStatus];
-
-
-export const WorkspaceUserStatus = {
-  active: 'active',
-  pending: 'pending',
-  disabled: 'disabled',
-} as const;
-
-export interface WorkspaceUser {
-  id: number;
-  userId: string;
-  displayName: string;
-  /** @nullable */
-  email?: string | null;
-  role: WorkspaceRole;
-  status: WorkspaceUserStatus;
-  createdAt: string;
-}
-
-export interface UserList {
-  items: WorkspaceUser[];
-  total: number;
-}
-
-export interface UserRoleUpdate {
-  role: WorkspaceRole;
-}
-
 export interface DashboardSummary {
   sourceCount: number;
   sourcesInReview: number;

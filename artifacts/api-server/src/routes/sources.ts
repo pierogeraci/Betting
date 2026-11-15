@@ -83,7 +83,7 @@ router.post(
         validUntil: toSqlDate(input.validUntil),
         legalStatus: "draft",
         connectorStatus: "not_configured",
-        createdBy: req.ctiUser!.clerkUserId,
+        createdBy: "anonymous",
       })
       .returning();
     await recordActivity(req, "Registered source for review", "source", created.id, created.name);
@@ -188,7 +188,7 @@ router.post(
       .set({
         legalStatus: decisionToStatus[body.data.decision],
         reviewNote: body.data.reason,
-        reviewerId: req.ctiUser!.clerkUserId,
+        reviewerId: "anonymous",
         updatedAt: new Date(),
       })
       .where(eq(ctiSourcesTable.id, source.id))

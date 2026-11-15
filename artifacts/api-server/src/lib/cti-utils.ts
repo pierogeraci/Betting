@@ -103,15 +103,13 @@ export async function recordActivity(
   entityId: string | number,
   entityLabel: string,
 ) {
-  const actor = req.ctiUser;
-  if (!actor) return;
   await db.insert(ctiActivityTable).values({
     action,
     entityType,
     entityId: String(entityId),
     entityLabel,
-    actorId: actor.clerkUserId,
-    actorLabel: actor.displayName,
+    actorId: "anonymous",
+    actorLabel: "Operatore anonimo",
   });
 }
 
@@ -125,7 +123,8 @@ export function serializeSource(source: CtiSource) {
   return {
     ...source,
     legalStatus,
-    reviewerLabel: source.reviewerId,
+    reviewerId: "anonymous",
+    reviewerLabel: "Operatore anonimo",
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
     ingestionAllowed: legalStatus === "approved" && effective,

@@ -10,7 +10,7 @@ tags:
   - name: health
     description: Health operations
   - name: workspace
-    description: Dashboard, current user and audit activity
+    description: Dashboard e registro delle attività
   - name: sources
     description: Source registry and authorization review
   - name: evidence
@@ -42,22 +42,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
-  /session:
-    get:
-      operationId: getSession
-      tags: [workspace]
-      summary: Get the authenticated user's application role
-      responses:
-        "200":
-          description: Current application identity
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Session"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -84,48 +68,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActivityList"
-  /users:
-    get:
-      operationId: listUsers
-      tags: [workspace]
-      summary: List workspace members and assigned roles
-      responses:
-        "200":
-          description: Members
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UserList"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-  /users/{userId}/role:
-    patch:
-      operationId: updateUserRole
-      tags: [workspace]
-      summary: Assign a workspace role
-      parameters:
-        - name: userId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UserRoleUpdate"
-      responses:
-        "200":
-          description: Updated member
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceUser"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
   /sources:
     get:
       operationId: listSources
@@ -797,45 +739,6 @@ components:
     WorkspaceRole:
       type: string
       enum: [admin, analyst, compliance_reviewer, restricted_analyst, read_only]
-    Session:
-      type: object
-      required: [authenticated, userId, displayName, role, accessState]
-      properties:
-        authenticated: { type: boolean }
-        userId: { type: string }
-        displayName: { type: string }
-        email: { type: ["string", "null"] }
-        role:
-          $ref: "#/components/schemas/WorkspaceRole"
-        accessState:
-          type: string
-          enum: [active, pending, disabled, setup_required]
-    WorkspaceUser:
-      type: object
-      required: [id, userId, displayName, role, status, createdAt]
-      properties:
-        id: { type: integer }
-        userId: { type: string }
-        displayName: { type: string }
-        email: { type: ["string", "null"] }
-        role:
-          $ref: "#/components/schemas/WorkspaceRole"
-        status:
-          type: string
-          enum: [active, pending, disabled]
-        createdAt: { type: string, format: date-time }
-    UserList:
-      type: object
-      required: [items, total]
-      properties:
-        items: { type: array, items: { $ref: "#/components/schemas/WorkspaceUser" } }
-        total: { type: integer }
-    UserRoleUpdate:
-      type: object
-      required: [role]
-      properties:
-        role:
-          $ref: "#/components/schemas/WorkspaceRole"
     DashboardSummary:
       type: object
       required: [sourceCount, sourcesInReview, approvedSources, evidenceCount, unclassifiedEvidence, siteCount, highRiskSites, eventCount, highRiskEvents, restrictedBettorCount, generatedAt]

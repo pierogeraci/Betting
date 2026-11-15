@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { RequestUploadUrlBody, RequestUploadUrlResponse } from "@workspace/api-zod";
 import { db, ctiEvidenceTable, ctiSourcesTable } from "@workspace/db";
-import { requireActiveMember } from "../lib/auth";
 import { isSafeObjectPath } from "../lib/cti-utils";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
 
@@ -23,7 +22,6 @@ const allowedTypes = new Set([
 
 router.post(
   "/storage/uploads/request-url",
-  requireActiveMember,
   async (req: Request, res: Response): Promise<void> => {
     const parsed = RequestUploadUrlBody.safeParse(req.body);
     if (!parsed.success) {
@@ -60,7 +58,6 @@ router.post(
 
 router.get(
   "/storage/objects/*path",
-  requireActiveMember,
   async (req: Request, res: Response): Promise<void> => {
   try {
     const raw = req.params.path;
