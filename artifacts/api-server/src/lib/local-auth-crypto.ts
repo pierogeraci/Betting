@@ -63,12 +63,14 @@ export async function verifyPassword(
 
 export function createSessionToken(
   userId: number,
+  sessionVersion = 0,
   secret = getSessionSecret(),
   now = Date.now(),
 ): string {
   const payload = Buffer.from(
     JSON.stringify({
       userId,
+      sessionVersion,
       expiresAt: Math.floor(now / 1000) + SESSION_LIFETIME_SECONDS,
     }),
   ).toString("base64url");
@@ -82,7 +84,7 @@ export function verifySessionToken(
   token: string | undefined,
   secret = getSessionSecret(),
   now = Date.now(),
-): number | null {
+): { userId: number; sessionVersion: number } | null {
   if (!token) return null;
   const [payload, signature, ...extra] = token.split(".");
   if (!payload || !signature || extra.length > 0) return null;
@@ -106,17 +108,23 @@ export function verifySessionToken(
   try {
     const decoded = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as {
       userId?: unknown;
+      sessionVersion?: unknown;
       expiresAt?: unknown;
     };
     if (
       !Number.isSafeInteger(decoded.userId) ||
       (decoded.userId as number) <= 0 ||
+      !Number.isSafeInteger(decoded.sessionVersion) ||
+      (decoded.sessionVersion as number) < 0 ||
       !Number.isSafeInteger(decoded.expiresAt) ||
       (decoded.expiresAt as number) <= Math.floor(now / 1000)
     ) {
       return null;
     }
-    return decoded.userId as number;
+    return {
+      userId: decoded.userId as number,
+      sessionVersion: decoded.sessionVersion as number,
+    };
   } catch {
     return null;
   }

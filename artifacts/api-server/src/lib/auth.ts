@@ -20,13 +20,13 @@ export async function requireAuthenticated(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
-  let userId: number | null;
+  let session: ReturnType<typeof verifySessionToken>;
   try {
-    userId = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
+    session = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
   } catch {
-    userId = null;
+    session = null;
   }
-  if (!userId) {
+  if (!session) {
     res.status(401).json({ error: "È necessario accedere alla piattaforma." });
     return;
   }
@@ -34,9 +34,13 @@ export async function requireAuthenticated(
   const [member] = await db
     .select()
     .from(ctiUsersTable)
-    .where(eq(ctiUsersTable.id, userId))
+    .where(eq(ctiUsersTable.id, session.userId))
     .limit(1);
-  if (!member?.userId || member.status !== "active") {
+  if (
+    !member?.userId ||
+    member.status !== "active" ||
+    member.sessionVersion !== session.sessionVersion
+  ) {
     res.status(401).json({ error: "La sessione non è valida o l’account non è attivo." });
     return;
   }

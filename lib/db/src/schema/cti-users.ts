@@ -1,5 +1,5 @@
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const ctiUsersTable = pgTable(
@@ -9,6 +9,7 @@ export const ctiUsersTable = pgTable(
     clerkUserId: text("clerk_user_id").notNull(),
     userId: text("user_id"),
     passwordHash: text("password_hash"),
+    sessionVersion: integer("session_version").notNull().default(0),
     displayName: text("display_name").notNull().default("Workspace member"),
     email: text("email"),
     role: text("role").notNull().default("read_only"),

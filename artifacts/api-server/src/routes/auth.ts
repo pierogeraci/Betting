@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   GetLocalSessionResponse,
   LoginLocalUserBody,
@@ -9,6 +9,7 @@ import { ctiUsersTable, db } from "@workspace/db";
 import {
   createSessionToken,
   getSessionSecret,
+  hashPassword,
   isValidUserId,
   normalizeUserId,
   SESSION_COOKIE_NAME,
@@ -32,20 +33,24 @@ function makeSessionUser(member: typeof ctiUsersTable.$inferSelect) {
 }
 
 async function readActiveMember(cookie: string | undefined) {
-  let userId: number | null;
+  let session: ReturnType<typeof verifySessionToken>;
   try {
-    userId = verifySessionToken(cookie);
+    session = verifySessionToken(cookie);
   } catch {
     return null;
   }
-  if (!userId) return null;
+  if (!session) return null;
 
   const [member] = await db
     .select()
     .from(ctiUsersTable)
-    .where(eq(ctiUsersTable.id, userId))
+    .where(eq(ctiUsersTable.id, session.userId))
     .limit(1);
-  return member?.userId && member.status === "active" ? member : null;
+  return member?.userId &&
+    member.status === "active" &&
+    member.sessionVersion === session.sessionVersion
+    ? member
+    : null;
 }
 
 router.get("/auth/session", async (req, res): Promise<void> => {
@@ -75,6 +80,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     for (const [key, record] of failedAttempts) {
       if (now - record.windowStart >= ATTEMPT_WINDOW_MS) failedAttempts.delete(key);
     }
+    while (failedAttempts.size > 2_000) {
+      const oldestKey = failedAttempts.keys().next().value;
+      if (!oldestKey) break;
+      failedAttempts.delete(oldestKey);
+    }
   }
   const attemptKey = `${req.ip || "unknown"}:${userId}`;
   const attempt = failedAttempts.get(attemptKey);
@@ -88,10 +98,9 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     .from(ctiUsersTable)
     .where(eq(ctiUsersTable.userId, userId))
     .limit(1);
-  const passwordMatches = await verifyPassword(
-    parsed.data.password,
-    member?.passwordHash,
-  );
+  const passwordMatches = member?.passwordHash
+    ? await verifyPassword(parsed.data.password, member.passwordHash)
+    : (await hashPassword(parsed.data.password), false);
 
   if (!member || !passwordMatches || member.status !== "active") {
     const current = attempt && now - attempt.windowStart < ATTEMPT_WINDOW_MS
@@ -103,7 +112,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   failedAttempts.delete(attemptKey);
-  const token = createSessionToken(member.id);
+  const token = createSessionToken(member.id, member.sessionVersion);
   res.cookie(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -119,7 +128,19 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   );
 });
 
-router.post("/auth/logout", (_req, res): void => {
+router.post("/auth/logout", async (req, res): Promise<void> => {
+  let session: ReturnType<typeof verifySessionToken> = null;
+  try {
+    session = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
+  } catch {
+    session = null;
+  }
+  if (session) {
+    await db
+      .update(ctiUsersTable)
+      .set({ sessionVersion: sql`${ctiUsersTable.sessionVersion} + 1` })
+      .where(eq(ctiUsersTable.id, session.userId));
+  }
   res.clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

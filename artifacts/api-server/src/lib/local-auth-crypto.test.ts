@@ -21,9 +21,9 @@ test("local password hashes are salted and can be verified", async () => {
 test("local sessions reject tampering, wrong keys, and expired cookies", () => {
   const secret = "test-signing-secret-with-at-least-32-bytes";
   const now = 1_800_000_000_000;
-  const token = createSessionToken(42, secret, now);
+  const token = createSessionToken(42, 3, secret, now);
 
-  assert.equal(verifySessionToken(token, secret, now), 42);
+  assert.deepEqual(verifySessionToken(token, secret, now), { userId: 42, sessionVersion: 3 });
   assert.equal(verifySessionToken(token, "another-test-secret-with-32-bytes", now), null);
   assert.equal(verifySessionToken(`${token}x`, secret, now), null);
   assert.equal(verifySessionToken(token, secret, now + 13 * 60 * 60 * 1000), null);
