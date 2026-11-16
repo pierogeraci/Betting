@@ -1,1 +1,1 @@
-- [Lingua e accesso della piattaforma](cti-language-access.md) — l’interfaccia CTI deve restare in italiano e non richiedere autenticazione.
+- [Lingua e accesso della piattaforma](cti-language-access.md) — mantenere la UI in italiano e proteggere i dati con sessioni e ruoli.

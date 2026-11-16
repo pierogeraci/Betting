@@ -68,6 +68,12 @@ export const WorkspaceRole = {
   read_only: 'read_only',
 } as const;
 
+export interface WorkspaceMembership {
+  role: WorkspaceRole | null;
+  /** @nullable */
+  status: string | null;
+}
+
 export interface DashboardSummary {
   sourceCount: number;
   sourcesInReview: number;

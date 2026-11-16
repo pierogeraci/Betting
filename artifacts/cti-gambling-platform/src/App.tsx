@@ -1,16 +1,27 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  useAuth,
+  useClerk,
+  useUser,
+} from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { itIT } from '@clerk/localizations';
+import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownToLine, ArrowRight, BadgeCheck, BarChart3,
   BookOpenCheck, Check, CheckCircle2, ChevronDown, ChevronRight,
   ClipboardList, Download, ExternalLink, FileCheck2, FilePlus2,
-  FileSearch, Filter, Fingerprint, Flag, Globe2, Landmark, LayoutDashboard, LockKeyhole,
+  FileSearch, Filter, Fingerprint, Flag, Globe2, Landmark, LayoutDashboard, LockKeyhole, LogOut,
   Menu, Plus, Search, Shield, ShieldAlert,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react';
 import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import {
-  getDownloadWorkbookQueryKey, getGetDashboardSummaryQueryKey, getGetEventQueryKey,
+  getDownloadWorkbookQueryKey, getGetCurrentMembershipQueryKey, getGetDashboardSummaryQueryKey, getGetEventQueryKey,
   getGetEvidenceQueryKey, getGetSiteProfileQueryKey,
   getGetSiteQueryKey, getGetSourceQueryKey, getGetTrustMatrixQueryKey,
   getHealthCheckQueryKey, getListActivityQueryKey, getListBettorsQueryKey,
@@ -18,7 +29,7 @@ import {
   getListSitesQueryKey, getListSourcesQueryKey, getListTrustScoresQueryKey,
   useCalculateTrustScore, useClassifyEvidence, useCreateBettor,
   useCreateEntity, useCreateEvent, useCreateEvidence, useCreateSite, useCreateSource,
-  useDownloadWorkbook, useGetDashboardSummary, useGetEvent, useGetEvidence,
+  useDownloadWorkbook, useGetCurrentMembership, useGetDashboardSummary, useGetEvent, useGetEvidence,
   useGetSite, useGetSiteProfile, useGetSource, useGetTrustMatrix,
   useHealthCheck, useLinkSiteEntity, useListActivity, useListBettors, useListEntities,
   useListEvents, useListEvidence, useListSites, useListSources, useListTrustScores,
@@ -36,6 +47,63 @@ import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+if (!clerkPubKey) {
+  throw new Error('Chiave pubblica Clerk non configurata.');
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/softstrategy-logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#9b7137',
+    colorForeground: '#26343b',
+    colorMutedForeground: '#697470',
+    colorBackground: '#fbfaf6',
+    colorInput: '#fffefa',
+    colorInputForeground: '#26343b',
+    colorDanger: '#a74e42',
+    colorNeutral: '#26343b',
+    fontFamily: 'DM Sans, sans-serif',
+    borderRadius: '0.45rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#fbfaf6] rounded-xl w-[440px] max-w-full overflow-hidden',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#26343b]',
+    headerSubtitle: 'text-[#697470]',
+    socialButtonsBlockButtonText: 'text-[#26343b]',
+    formFieldLabel: 'text-[#26343b]',
+    footerActionLink: 'text-[#805a2f]',
+    footerActionText: 'text-[#697470]',
+    dividerText: 'text-[#697470]',
+    identityPreviewEditButton: 'text-[#805a2f]',
+    formFieldSuccessText: 'text-[#486b5d]',
+    alertText: 'text-[#a74e42]',
+    logoBox: 'h-10',
+    logoImage: 'max-h-10',
+    socialButtonsBlockButton: 'border-[#dedbd1]',
+    formButtonPrimary: 'bg-[#9b7137]',
+    formFieldInput: 'border-[#dedbd1] bg-[#fffefa] text-[#26343b]',
+    footerAction: 'text-[#697470]',
+    dividerLine: 'bg-[#dedbd1]',
+    alert: 'border-[#a74e42]',
+    otpCodeFieldInput: 'border-[#dedbd1]',
+    formFieldRow: 'text-[#26343b]',
+    main: 'text-[#26343b]',
+  },
+};
 
 const navGroups = [
   { title: 'Piattaforma', items: [
@@ -123,10 +191,13 @@ function useSearch() { const [q, setQ] = useState(''); return { q, setQ }; }
 function Sidebar() {
   const [path] = useLocation();
   const [open, setOpen] = useState(false);
-  return <Italiano><><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Apri la navigazione"><Menu size={19}/></button><aside className={`sidebar ${open ? 'sidebar-open' : ''}`}><a className="softstrategy-brand" href="https://www.softstrategy.it/" target="_blank" rel="noopener noreferrer" aria-label="Softstrategy, sito ufficiale"><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy" width="774" height="270"/><span>Prototipo realizzato da Softstrategy</span></a><Link href="/dashboard" className="brand sidebar-brand"><span className="brand-mark"><Shield size={18}/></span><span>CTI <b>INTELLIGENCE</b></span></Link><div className="workspace-switch"><div className="workspace-symbol">CI</div><div><b>Analisi CTI</b><span>Accesso aperto</span></div><ChevronDown size={14}/></div><div className="side-label">NAVIGAZIONE</div><nav>{navGroups.map(group => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(item => { const Icon = item.icon; return <Link key={item.path} href={item.path} onClick={() => setOpen(false)} className={`nav-link ${path === item.path ? 'nav-active' : ''}`} data-testid={`link-${item.path.slice(1).replaceAll('/', '-')}`}><Icon size={16}/><span>{item.name}</span>{path === item.path && <i/>}</Link>; })}</div>)}</nav><div className="sidebar-foot"><div className="connectivity"><span className="online-dot"/> Servizio disponibile</div></div></aside>{open && <button className="mobile-scrim" onClick={() => setOpen(false)} aria-label="Chiudi navigazione"/>}</></Italiano>;
+  return <Italiano><><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Apri la navigazione"><Menu size={19}/></button><aside className={`sidebar ${open ? 'sidebar-open' : ''}`}><a className="softstrategy-brand" href="https://www.softstrategy.it/" target="_blank" rel="noopener noreferrer" aria-label="Softstrategy, sito ufficiale"><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy" width="774" height="270"/><span>Prototipo realizzato da Softstrategy</span></a><Link href="/dashboard" className="brand sidebar-brand"><span className="brand-mark"><Shield size={18}/></span><span>CTI <b>INTELLIGENCE</b></span></Link><div className="workspace-switch"><div className="workspace-symbol">CI</div><div><b>Analisi CTI</b><span>Accesso riservato</span></div><ChevronDown size={14}/></div><div className="side-label">NAVIGAZIONE</div><nav>{navGroups.map(group => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(item => { const Icon = item.icon; return <Link key={item.path} href={item.path} onClick={() => setOpen(false)} className={`nav-link ${path === item.path ? 'nav-active' : ''}`} data-testid={`link-${item.path.slice(1).replaceAll('/', '-')}`}><Icon size={16}/><span>{item.name}</span>{path === item.path && <i/>}</Link>; })}</div>)}</nav><div className="sidebar-foot"><div className="connectivity"><span className="online-dot"/> Servizio disponibile</div></div></aside>{open && <button className="mobile-scrim" onClick={() => setOpen(false)} aria-label="Chiudi navigazione"/>}</></Italiano>;
 }
 function AppShell({ children, title }: { children: ReactNode; title: string }) {
-  return <Italiano><div className="app-frame grain"><Sidebar/><div className="app-main"><header className="topbar"><div className="crumb">CTI <ChevronRight size={13}/> <b>{traduci(title)}</b></div><div className="topbar-right"><span className="topbar-status"><span className="online-dot"/> Piattaforma attiva</span><span className="topbar-date">{new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span></div></header><div className="notice notice-amber access-open-warning"><LockKeyhole size={15}/><span><b>Accesso senza autenticazione.</b> Chiunque abbia il link può vedere e modificare i dati. Non inserire informazioni personali, riservate o credenziali.</span></div><div className="content-wrap page-enter">{children}</div><footer className="app-footer"><span>CTI INTELLIGENCE <b>·</b> FASE 01</span><span>Inserimento manuale <span className="footer-divider">/</span> Valutazioni provvisorie</span></footer></div></div></Italiano>;
+  const { signOut } = useClerk();
+  const { user } = useUser();
+  const displayName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Membro';
+  return <Italiano><div className="app-frame grain"><Sidebar/><div className="app-main"><header className="topbar"><div className="crumb">CTI <ChevronRight size={13}/> <b>{traduci(title)}</b></div><div className="topbar-right"><span className="topbar-status"><span className="online-dot"/> {displayName}</span><span className="topbar-date">{new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span><button className="icon-button" onClick={() => void signOut({ redirectUrl: basePath || '/' })} aria-label="Esci dalla piattaforma" title="Esci"><LogOut size={16}/></button></div></header><div className="notice notice-amber"><LockKeyhole size={15}/><span><b>Sessione autenticata.</b> L’accesso ai dati riservati dipende dal ruolo attivo assegnato alla piattaforma.</span></div><div className="content-wrap page-enter">{children}</div><footer className="app-footer"><span>CTI INTELLIGENCE <b>·</b> FASE 01</span><span>Inserimento manuale <span className="footer-divider">/</span> Valutazioni provvisorie</span></footer></div></div></Italiano>;
 }
 
 function Dashboard() {
@@ -294,32 +365,90 @@ function Trust() {
 }
 
 function Exports() {
-  const [scope,setScope] = useState<'all'|'sources'|'evidence'|'sites'|'entities'|'events'|'bettors'|'trust'|'audit'>('all');
-  const [includeRestricted,setIncludeRestricted] = useState(false);
-  const workbook = useDownloadWorkbook({ scope, includeRestricted }, { query: { enabled: false, queryKey: getDownloadWorkbookQueryKey({ scope, includeRestricted }) } });
-  const [downloadError,setDownloadError] = useState('');
+  const [scope, setScope] = useState<'all'|'sources'|'evidence'|'sites'|'entities'|'events'|'bettors'|'trust'|'audit'>('all');
+  const [includeRestricted, setIncludeRestricted] = useState(false);
+  const membership = useGetCurrentMembership({
+    query: { queryKey: getGetCurrentMembershipQueryKey(), staleTime: 30000 },
+  });
+  const permittedRoles = ['admin', 'compliance_reviewer', 'restricted_analyst'];
+  const canExportRestricted = membership.data?.status === 'active' &&
+    permittedRoles.includes(membership.data.role || '');
+  const workbook = useDownloadWorkbook(
+    { scope, includeRestricted },
+    { query: { enabled: false, queryKey: getDownloadWorkbookQueryKey({ scope, includeRestricted }) } },
+  );
+  const [downloadError, setDownloadError] = useState('');
   const download = async () => {
     setDownloadError('');
     try {
       const result = await workbook.refetch();
+      if (result.error) {
+        const status = 'status' in result.error ? result.error.status : undefined;
+        if (status === 403) {
+          throw new Error('Il ruolo o lo stato del profilo non consente questa esportazione.');
+        }
+        throw result.error;
+      }
       if (!result.data) throw new Error('Workbook unavailable');
       const blob = result.data instanceof Blob ? result.data : new Blob([result.data as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const href = URL.createObjectURL(blob);
       const anchor = document.createElement('a'); anchor.href = href; anchor.download = `cti-intelligence-${scope}-${new Date().toISOString().slice(0,10)}.xlsx`; document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(href);
-    } catch { setDownloadError('Workbook generation failed. Check access and try again.'); }
+    } catch (error) {
+      setDownloadError(error instanceof Error && error.message.startsWith('Il ruolo')
+        ? error.message
+        : 'Non è stato possibile generare il file Excel. Verifica l’accesso e riprova.');
+    }
   };
   const sheets = [
     ['Fonti', 'Stato dell’autorizzazione, connettore, ambito e riferimento al caveau'],
     ['Evidenze', 'Record originali, classificazione, normalizzazione e collegamenti'],
-    ['Siti', 'Osservazioni del profilo, stato del collegamento legale e indice di affidabilità'],
+    ['Siti', 'Osservazioni del profilo, collegamento legale e indice di affidabilità'],
     ['Entità', 'Entità legali candidate e note sulle evidenze'],
     ['Eventi', 'Dati di mercato autorizzati e valutazione provvisoria separata'],
-    ['Scommettitori', 'Dati pseudonimi riservati, inclusi solo su richiesta esplicita'],
-    ['Indice', 'Sette fattori, tre indicatori di minaccia, punteggio normalizzato e calibrazione'],
+    ['Scommettitori', 'Profili pseudonimi: inclusi solo per ruoli autorizzati e su richiesta esplicita'],
+    ['Indice', 'Fattori, indicatori, punteggio normalizzato e calibrazione'],
     ['Attività', 'Azioni registrate, operatore, entità e data'],
+    ['Metodologia', 'Formule, scale, limiti e avvertenze sulla calibrazione'],
   ];
+  const scopeBySheet: Record<string, string | string[]> = {
+    Fonti: 'sources', Evidenze: 'evidence', Siti: 'sites', Entità: 'entities',
+    Eventi: 'events', Scommettitori: 'bettors', Indice: 'trust', Attività: 'audit',
+    Metodologia: ['events', 'trust'],
+  };
+  const visibleSheets = sheets.filter(([name]) =>
+    (name !== 'Scommettitori' || canExportRestricted) &&
+    (scope === 'all' ||
+      (Array.isArray(scopeBySheet[name])
+        ? (scopeBySheet[name] as string[]).includes(scope)
+        : scopeBySheet[name] === scope)),
+  );
+  const scopeLabels: Record<string, string> = {
+    sources: 'Fonti', evidence: 'Evidenze', sites: 'Siti', entities: 'Entità',
+    events: 'Eventi', bettors: 'Scommettitori', trust: 'Indice', audit: 'Attività',
+  };
   return <AppShell title="Esportazioni Excel"><PageHeading eyebrow="ESTRAZIONE TRACCIABILE" title="Esportazioni Excel" detail="Genera un file con più fogli, tracciabilità delle fonti e un ambito esplicito."/>
-    <div className="export-layout"><section className="panel export-config"><div className="export-kicker"><div className="export-icon"><Download size={20}/></div><div><div className="eyebrow">CREAZIONE DEL FILE EXCEL</div><h2>Crea un’estrazione</h2></div></div><p>Seleziona l’ambito dei dati. Il risultato sarà un file Excel scaricabile. L’accesso è aperto: non inserire informazioni riservate o personali.</p><label className="field"><span>Ambito dell’estrazione</span><select value={scope} onChange={e => setScope(e.target.value as typeof scope)}>{['all','sources','evidence','sites','entities','events','bettors','trust','audit'].map(o => <option value={o} key={o}>{o === 'all' ? 'Tutti i fogli disponibili' : ({sources:'Fonti',evidence:'Evidenze',sites:'Siti',entities:'Entità',events:'Eventi',bettors:'Scommettitori',trust:'Indice',audit:'Attività'} as Record<string,string>)[o]}</option>)}</select></label><label className="restricted-toggle"><input type="checkbox" checked={includeRestricted} onChange={e => setIncludeRestricted(e.target.checked)}/><span><LockKeyhole size={16}/><span><b>Includi i dati riservati degli scommettitori</b><small>Il file conterrà questi dati solo se selezioni esplicitamente questa opzione.</small></span></span></label>{downloadError && <ErrorText text={downloadError}/>}<Button onClick={download} disabled={workbook.isFetching} className="download-button">{workbook.isFetching ? 'Preparazione del file Excel…' : <><Download size={16}/> Genera il file Excel</>}</Button><div className="export-footnote"><ShieldCheck size={14}/> L’esportazione viene registrata nel registro delle attività.</div></section><aside className="panel sheet-panel"><div className="eyebrow">DATI INCLUSI / TRACCIABILITÀ</div><h2>Contenuto del file Excel</h2><div className="sheet-list">{sheets.filter(([name]) => scope === 'all' || ({Fonti:'sources',Evidenze:'evidence',Siti:'sites',Entità:'entities',Eventi:'events',Scommettitori:'bettors',Indice:'trust',Attività:'audit'} as Record<string,string>)[name] === scope).map(([name,detail],i) => <div key={name}><span className="sheet-number">0{i+1}</span><span><b>{name}</b><small>{detail}</small></span><FileCheck2 size={15}/></div>)}</div><div className="lineage-callout"><FileSearch size={17}/><span><b>Tracciabilità integrata</b><small>Ambito, identificativi e riferimenti alle fonti restano nei dati esportati.</small></span></div></aside></div>
+    <div className="export-layout">
+      <section className="panel export-config">
+        <div className="export-kicker"><div className="export-icon"><Download size={20}/></div><div><div className="eyebrow">CREAZIONE DEL FILE EXCEL</div><h2>Crea un’estrazione</h2></div></div>
+        <p>Seleziona l’ambito dei dati. Il risultato sarà un file Excel scaricabile. L’accesso richiede un account autorizzato.</p>
+        <label className="field"><span>Ambito dell’estrazione</span><select value={scope} onChange={e => { const next = e.target.value as typeof scope; setScope(next); if (next !== 'all' && next !== 'bettors') setIncludeRestricted(false); }}>
+          <option value="all">Tutti i fogli disponibili</option>
+          {['sources','evidence','sites','entities','events','trust','audit', ...(canExportRestricted ? ['bettors'] : [])].map(option => <option value={option} key={option}>{scopeLabels[option]}</option>)}
+        </select></label>
+        {canExportRestricted && (scope === 'all' || scope === 'bettors') ? (
+          <label className="restricted-toggle"><input type="checkbox" checked={includeRestricted} onChange={e => setIncludeRestricted(e.target.checked)}/><span><LockKeyhole size={16}/><span><b>Includi i dati riservati degli scommettitori</b><small>Visibili solo ai ruoli autorizzati; l’inclusione richiede una selezione esplicita.</small></span></span></label>
+        ) : !canExportRestricted ? (
+          <p className="export-role-note">I profili riservati non sono disponibili per il ruolo attuale. Ruoli abilitati: amministratore, revisore della conformità e analista con accesso limitato.</p>
+        ) : null}
+        {downloadError && <ErrorText text={downloadError}/>}
+        <Button onClick={download} disabled={workbook.isFetching} className="download-button">{workbook.isFetching ? 'Preparazione del file Excel…' : <><Download size={16}/> Genera il file Excel</>}</Button>
+        <div className="export-footnote"><ShieldCheck size={14}/> L’esportazione viene registrata nel registro delle attività.</div>
+      </section>
+      <aside className="panel sheet-panel"><div className="eyebrow">DATI INCLUSI / TRACCIABILITÀ</div><h2>Contenuto del file Excel</h2>
+        <div className="sheet-list">{visibleSheets.map(([name,detail],i) => <div key={name}><span className="sheet-number">0{i+1}</span><span><b>{name}</b><small>{detail}</small></span><FileCheck2 size={15}/></div>)}</div>
+        <div className="lineage-callout"><FileSearch size={17}/><span><b>Tracciabilità integrata</b><small>Ambito, identificativi e riferimenti alle fonti restano nei dati esportati.</small></span></div>
+      </aside>
+    </div>
   </AppShell>;
 }
 function WorkspaceRoutes() {
@@ -337,12 +466,85 @@ function WorkspaceRoutes() {
     <Route component={NotFound}/>
   </Switch>;
 }
+function PublicLanding() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (isLoaded && isSignedIn) return <Redirect to="/dashboard"/>;
+  return <main className="auth-landing">
+    <a className="auth-brand" href={`${basePath || ''}/`}><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy"/></a>
+    <div className="auth-landing-content">
+      <div className="eyebrow">PIATTAFORMA DI ANALISI CTI</div>
+      <h1>Analisi autorizzata.<br/>Evidenze tracciabili.</h1>
+      <p>Una piattaforma per registrare fonti autorizzate, conservare le evidenze e verificare valutazioni ed esportazioni.</p>
+      <div className="auth-landing-actions">
+        <Link className="btn btn-primary" href="/sign-in">Accedi alla piattaforma <ArrowRight size={16}/></Link>
+        <Link className="btn btn-outline" href="/sign-up">Crea un account</Link>
+      </div>
+      <p className="auth-landing-note">L’accesso ai dati riservati dipende dal ruolo attivo assegnato alla piattaforma.</p>
+    </div>
+  </main>;
+}
+function SignInPage() {
+  return <main className="auth-page"><Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}/></main>;
+}
+function SignUpPage() {
+  return <main className="auth-page"><Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`}/></main>;
+}
+function WorkspaceGate() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
+  if (!isSignedIn) return <Redirect to="/sign-in"/>;
+  return <Router/>;
+}
+function ApplicationRoutes() {
+  return <Switch>
+    <Route path="/sign-in/*?" component={SignInPage}/>
+    <Route path="/sign-up/*?" component={SignUpPage}/>
+    <Route path="/" component={PublicLanding}/>
+    <Route component={WorkspaceGate}/>
+  </Switch>;
+}
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const client = useQueryClient();
+  const previousUserId = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const nextUserId = user?.id ?? null;
+      if (previousUserId.current !== undefined && previousUserId.current !== nextUserId) {
+        client.clear();
+      }
+      previousUserId.current = nextUserId;
+    });
+    return unsubscribe;
+  }, [addListener, client]);
+
+  return null;
+}
 function Router() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Italiano><WorkspaceRoutes/></Italiano></ErrorBoundary>;
 }
+function ClerkApplication() {
+  const [, setLocation] = useLocation();
+  const stripBase = (path: string) =>
+    basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
+  return <ClerkProvider
+    publishableKey={clerkPubKey}
+    proxyUrl={clerkProxyUrl}
+    appearance={clerkAppearance}
+    localization={itIT}
+    signInUrl={`${basePath}/sign-in`}
+    signUpUrl={`${basePath}/sign-up`}
+    routerPush={to => setLocation(stripBase(to))}
+    routerReplace={to => setLocation(stripBase(to), { replace: true })}
+  >
+    <ClerkQueryClientCacheInvalidator/>
+    <ApplicationRoutes/>
+  </ClerkProvider>;
+}
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><Router/></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><ClerkApplication/></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;

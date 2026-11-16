@@ -1,6 +1,8 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
 import {
+  GetCurrentMembershipResponse,
   GetDashboardSummaryResponse,
   ListActivityQueryParams,
   ListActivityResponse,
@@ -13,10 +15,31 @@ import {
   ctiEventsTable,
   ctiSitesTable,
   ctiSourcesTable,
+  ctiUsersTable,
 } from "@workspace/db";
 import { recordActivity } from "../lib/cti-utils";
 
 const router: IRouter = Router();
+
+router.get("/workspace/me", async (req, res): Promise<void> => {
+  const { userId } = getAuth(req);
+  if (!userId) {
+    res.status(401).json({ error: "È necessario accedere alla piattaforma." });
+    return;
+  }
+
+  const [member] = await db
+    .select({ role: ctiUsersTable.role, status: ctiUsersTable.status })
+    .from(ctiUsersTable)
+    .where(eq(ctiUsersTable.clerkUserId, userId))
+    .limit(1);
+  res.json(
+    GetCurrentMembershipResponse.parse({
+      role: member?.role ?? null,
+      status: member?.status ?? null,
+    }),
+  );
+});
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const [sources, evidence, sites, events, bettors] = await Promise.all([

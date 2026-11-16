@@ -7,6 +7,7 @@ import { isSafeObjectPath } from "../lib/cti-utils";
 import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
+export const publicObjectsRouter: IRouter = Router();
 const storage = new ObjectStorageService();
 const maxFileBytes = 15 * 1024 * 1024;
 const allowedTypes = new Set([
@@ -100,7 +101,7 @@ router.get(
   },
 );
 
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response): Promise<void> => {
+publicObjectsRouter.get("/storage/public-objects/*filePath", async (req: Request, res: Response): Promise<void> => {
   try {
     const raw = req.params.filePath;
     const filePath = Array.isArray(raw) ? raw.join("/") : raw;

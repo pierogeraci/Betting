@@ -87,4 +87,5 @@ export * from './uploadUrlRequestPurpose';
 export * from './uploadUrlResponse';
 export * from './vulnerabilityFactor';
 export * from './vulnerabilityFactorKey';
+export * from './workspaceMembership';
 export * from './workspaceRole';

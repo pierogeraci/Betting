@@ -73,7 +73,8 @@ import type {
   TrustScoreList,
   UnauthorizedResponse,
   UploadUrlRequest,
-  UploadUrlResponse
+  UploadUrlResponse,
+  WorkspaceMembership
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -192,6 +193,107 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetCurrentMembershipUrl = () => {
+
+
+
+
+  return `/api/workspace/me`
+}
+
+/**
+ * @summary Get the current user's workspace role and approval status
+ */
+export const getCurrentMembership = async ( options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembership> => {
+
+  return customFetch<WorkspaceMembership>(getGetCurrentMembershipUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCurrentMembershipQueryKey = () => {
+    return [
+    `/api/workspace/me`
+    ] as const;
+    }
+
+
+export const getGetCurrentMembershipQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentMembership>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentMembershipQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentMembership>>> = ({ signal }) => getCurrentMembership({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentMembershipQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentMembership>>>
+export type GetCurrentMembershipQueryError = ErrorType<UnauthorizedResponse>
+
+
+export function useGetCurrentMembership<TData = Awaited<ReturnType<typeof getCurrentMembership>>, TError = ErrorType<UnauthorizedResponse>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentMembership>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentMembership>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentMembership<TData = Awaited<ReturnType<typeof getCurrentMembership>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCurrentMembership>>,
+          TError,
+          Awaited<ReturnType<typeof getCurrentMembership>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentMembership<TData = Awaited<ReturnType<typeof getCurrentMembership>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get the current user's workspace role and approval status
+ */
+
+export function useGetCurrentMembership<TData = Awaited<ReturnType<typeof getCurrentMembership>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentMembership>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetCurrentMembershipQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

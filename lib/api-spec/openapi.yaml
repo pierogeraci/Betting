@@ -6,6 +6,8 @@ info:
 servers:
   - url: /api
     description: Base API path
+security:
+  - clerkSession: []
 tags:
   - name: health
     description: Health operations
@@ -35,6 +37,7 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
+      security: []
       responses:
         "200":
           description: Healthy
@@ -42,6 +45,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /workspace/me:
+    get:
+      operationId: getCurrentMembership
+      tags: [workspace]
+      summary: Get the current user's workspace role and approval status
+      responses:
+        "200":
+          description: Current workspace membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceMembership"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -647,6 +664,7 @@ paths:
       operationId: getPublicObject
       tags: [storage]
       summary: Serve a public asset from the configured public storage paths
+      security: []
       parameters:
         - name: filePath
           in: path
@@ -664,6 +682,11 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 components:
+  securitySchemes:
+    clerkSession:
+      type: apiKey
+      in: cookie
+      name: __session
   parameters:
     Id:
       name: id
@@ -739,6 +762,16 @@ components:
     WorkspaceRole:
       type: string
       enum: [admin, analyst, compliance_reviewer, restricted_analyst, read_only]
+    WorkspaceMembership:
+      type: object
+      required: [role, status]
+      properties:
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/WorkspaceRole"
+            - type: "null"
+        status:
+          type: ["string", "null"]
     DashboardSummary:
       type: object
       required: [sourceCount, sourcesInReview, approvedSources, evidenceCount, unclassifiedEvidence, siteCount, highRiskSites, eventCount, highRiskEvents, restrictedBettorCount, generatedAt]

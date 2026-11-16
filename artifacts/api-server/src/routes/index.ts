@@ -1,14 +1,17 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import { requireAuthenticated } from "../lib/auth";
 import workspaceRouter from "./workspace";
 import sourcesRouter from "./sources";
 import intelligenceRouter from "./intelligence";
 import exportsRouter from "./exports";
-import storageRouter from "./storage";
+import storageRouter, { publicObjectsRouter } from "./storage";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(publicObjectsRouter);
+router.use(requireAuthenticated);
 router.use(storageRouter);
 router.use(workspaceRouter);
 router.use(sourcesRouter);

@@ -17,6 +17,15 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Get the current user's workspace role and approval status
+ */
+export const GetCurrentMembershipResponse = zod.object({
+  "role": zod.union([zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),zod.null()]),
+  "status": zod.string().nullable()
+})
+
+
+/**
  * @summary Get dashboard totals and risk breakdowns
  */
 export const GetDashboardSummaryResponse = zod.object({
