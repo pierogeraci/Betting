@@ -9,6 +9,54 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Get the current local user session
+ */
+export const GetLocalSessionResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "user": zod.union([zod.object({
+  "userId": zod.string(),
+  "displayName": zod.string(),
+  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),
+  "status": zod.string()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Sign in with a local user ID and password
+ */
+export const loginLocalUserBodyUserIdMin = 3;
+export const loginLocalUserBodyUserIdMax = 64;
+
+
+export const loginLocalUserBodyUserIdRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$');
+export const loginLocalUserBodyPasswordMax = 256;
+
+
+
+export const LoginLocalUserBody = zod.object({
+  "userId": zod.string().min(loginLocalUserBodyUserIdMin).max(loginLocalUserBodyUserIdMax).regex(loginLocalUserBodyUserIdRegExp),
+  "password": zod.string().min(1).max(loginLocalUserBodyPasswordMax)
+})
+
+export const LoginLocalUserResponse = zod.object({
+  "authenticated": zod.boolean(),
+  "user": zod.union([zod.object({
+  "userId": zod.string(),
+  "displayName": zod.string(),
+  "role": zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),
+  "status": zod.string()
+}),zod.null()])
+})
+
+
+/**
+ * @summary End the current local user session
+ */
+export const LogoutLocalUserResponse = zod.void()
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -20,6 +68,8 @@ export const HealthCheckResponse = zod.object({
  * @summary Get the current user's workspace role and approval status
  */
 export const GetCurrentMembershipResponse = zod.object({
+  "userId": zod.string(),
+  "displayName": zod.string(),
   "role": zod.union([zod.enum(['admin', 'analyst', 'compliance_reviewer', 'restricted_analyst', 'read_only']),zod.null()]),
   "status": zod.string().nullable()
 })

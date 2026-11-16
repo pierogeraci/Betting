@@ -7,6 +7,8 @@ export const ctiUsersTable = pgTable(
   {
     id: serial("id").primaryKey(),
     clerkUserId: text("clerk_user_id").notNull(),
+    userId: text("user_id"),
+    passwordHash: text("password_hash"),
     displayName: text("display_name").notNull().default("Workspace member"),
     email: text("email"),
     role: text("role").notNull().default("read_only"),
@@ -14,7 +16,10 @@ export const ctiUsersTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },
-  (table) => [uniqueIndex("cti_users_clerk_user_id_idx").on(table.clerkUserId)],
+  (table) => [
+    uniqueIndex("cti_users_clerk_user_id_idx").on(table.clerkUserId),
+    uniqueIndex("cti_users_user_id_idx").on(table.userId),
+  ],
 );
 
 export const insertCtiUserSchema = createInsertSchema(ctiUsersTable).omit({

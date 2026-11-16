@@ -1,16 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import {
-  ClerkProvider,
-  SignIn,
-  SignUp,
-  useAuth,
-  useClerk,
-  useUser,
-} from '@clerk/react';
-import { publishableKeyFromHost } from '@clerk/react/internal';
-import { itIT } from '@clerk/localizations';
-import { shadcn } from '@clerk/themes';
 import {
   Activity, ArrowDownToLine, ArrowRight, BadgeCheck, BarChart3,
   BookOpenCheck, Check, CheckCircle2, ChevronDown, ChevronRight,
@@ -37,7 +26,7 @@ import {
   useUpdateEvidence, useUpdateSite, useUpdateSource,
 } from '@workspace/api-client-react';
 import type {
-  BettorInput, EntityInput, EventInput, EvidenceInput, SiteInput, SourceInput, VulnerabilityFactorKey,
+  BettorInput, EntityInput, EventInput, EvidenceInput, LocalSessionUser, SiteInput, SourceInput, VulnerabilityFactorKey,
 } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -47,63 +36,63 @@ import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
-if (!clerkPubKey) {
-  throw new Error('Chiave pubblica Clerk non configurata.');
-}
-
-const clerkAppearance = {
-  theme: shadcn,
-  cssLayerName: 'clerk',
-  options: {
-    logoPlacement: 'inside' as const,
-    logoLinkUrl: basePath || '/',
-    logoImageUrl: `${window.location.origin}${basePath}/softstrategy-logo.svg`,
-  },
-  variables: {
-    colorPrimary: '#9b7137',
-    colorForeground: '#26343b',
-    colorMutedForeground: '#697470',
-    colorBackground: '#fbfaf6',
-    colorInput: '#fffefa',
-    colorInputForeground: '#26343b',
-    colorDanger: '#a74e42',
-    colorNeutral: '#26343b',
-    fontFamily: 'DM Sans, sans-serif',
-    borderRadius: '0.45rem',
-  },
-  elements: {
-    rootBox: 'w-full flex justify-center',
-    cardBox: 'bg-[#fbfaf6] rounded-xl w-[440px] max-w-full overflow-hidden',
-    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
-    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
-    headerTitle: 'text-[#26343b]',
-    headerSubtitle: 'text-[#697470]',
-    socialButtonsBlockButtonText: 'text-[#26343b]',
-    formFieldLabel: 'text-[#26343b]',
-    footerActionLink: 'text-[#805a2f]',
-    footerActionText: 'text-[#697470]',
-    dividerText: 'text-[#697470]',
-    identityPreviewEditButton: 'text-[#805a2f]',
-    formFieldSuccessText: 'text-[#486b5d]',
-    alertText: 'text-[#a74e42]',
-    logoBox: 'h-10',
-    logoImage: 'max-h-10',
-    socialButtonsBlockButton: 'border-[#dedbd1]',
-    formButtonPrimary: 'bg-[#9b7137]',
-    formFieldInput: 'border-[#dedbd1] bg-[#fffefa] text-[#26343b]',
-    footerAction: 'text-[#697470]',
-    dividerLine: 'bg-[#dedbd1]',
-    alert: 'border-[#a74e42]',
-    otpCodeFieldInput: 'border-[#dedbd1]',
-    formFieldRow: 'text-[#26343b]',
-    main: 'text-[#26343b]',
-  },
+type LocalAuthContextValue = {
+  user: LocalSessionUser | null;
+  loading: boolean;
+  refreshSession: () => Promise<LocalSessionUser | null>;
+  logout: () => Promise<void>;
 };
+const LocalAuthContext = createContext<LocalAuthContextValue | null>(null);
+function useLocalAuth() {
+  const value = useContext(LocalAuthContext);
+  if (!value) throw new Error('LocalAuthProvider non configurato.');
+  return value;
+}
+function LocalAuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<LocalSessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const client = useQueryClient();
+  const refreshSession = async (): Promise<LocalSessionUser | null> => {
+    try {
+      const response = await fetch(`${basePath}/api/auth/session`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Sessione non disponibile');
+      const session = await response.json() as { authenticated: boolean; user: LocalSessionUser | null };
+      setUser(session.authenticated ? session.user : null);
+      return session.authenticated ? session.user : null;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    let active = true;
+    const check = async () => {
+      const response = await fetch(`${basePath}/api/auth/session`, { credentials: 'include' }).catch(() => null);
+      if (!active) return;
+      if (!response?.ok) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      const session = await response.json() as { authenticated: boolean; user: LocalSessionUser | null };
+      if (active) {
+        setUser(session.authenticated ? session.user : null);
+        setLoading(false);
+      }
+    };
+    void check();
+    const interval = window.setInterval(() => { void refreshSession(); }, 60_000);
+    return () => { active = false; window.clearInterval(interval); };
+  }, []);
+  const logout = async () => {
+    await fetch(`${basePath}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => undefined);
+    setUser(null);
+    client.clear();
+  };
+  return <LocalAuthContext.Provider value={{ user, loading, refreshSession, logout }}>{children}</LocalAuthContext.Provider>;
+}
 
 const navGroups = [
   { title: 'Piattaforma', items: [
@@ -194,10 +183,9 @@ function Sidebar() {
   return <Italiano><><button className="mobile-menu" onClick={() => setOpen(!open)} aria-label="Apri la navigazione"><Menu size={19}/></button><aside className={`sidebar ${open ? 'sidebar-open' : ''}`}><a className="softstrategy-brand" href="https://www.softstrategy.it/" target="_blank" rel="noopener noreferrer" aria-label="Softstrategy, sito ufficiale"><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy" width="774" height="270"/><span>Prototipo realizzato da Softstrategy</span></a><Link href="/dashboard" className="brand sidebar-brand"><span className="brand-mark"><Shield size={18}/></span><span>CTI <b>INTELLIGENCE</b></span></Link><div className="workspace-switch"><div className="workspace-symbol">CI</div><div><b>Analisi CTI</b><span>Accesso riservato</span></div><ChevronDown size={14}/></div><div className="side-label">NAVIGAZIONE</div><nav>{navGroups.map(group => <div className="nav-group" key={group.title}><span className="nav-group-title">{group.title}</span>{group.items.map(item => { const Icon = item.icon; return <Link key={item.path} href={item.path} onClick={() => setOpen(false)} className={`nav-link ${path === item.path ? 'nav-active' : ''}`} data-testid={`link-${item.path.slice(1).replaceAll('/', '-')}`}><Icon size={16}/><span>{item.name}</span>{path === item.path && <i/>}</Link>; })}</div>)}</nav><div className="sidebar-foot"><div className="connectivity"><span className="online-dot"/> Servizio disponibile</div></div></aside>{open && <button className="mobile-scrim" onClick={() => setOpen(false)} aria-label="Chiudi navigazione"/>}</></Italiano>;
 }
 function AppShell({ children, title }: { children: ReactNode; title: string }) {
-  const { signOut } = useClerk();
-  const { user } = useUser();
-  const displayName = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Membro';
-  return <Italiano><div className="app-frame grain"><Sidebar/><div className="app-main"><header className="topbar"><div className="crumb">CTI <ChevronRight size={13}/> <b>{traduci(title)}</b></div><div className="topbar-right"><span className="topbar-status"><span className="online-dot"/> {displayName}</span><span className="topbar-date">{new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span><button className="icon-button" onClick={() => void signOut({ redirectUrl: basePath || '/' })} aria-label="Esci dalla piattaforma" title="Esci"><LogOut size={16}/></button></div></header><div className="notice notice-amber"><LockKeyhole size={15}/><span><b>Sessione autenticata.</b> L’accesso ai dati riservati dipende dal ruolo attivo assegnato alla piattaforma.</span></div><div className="content-wrap page-enter">{children}</div><footer className="app-footer"><span>CTI INTELLIGENCE <b>·</b> FASE 01</span><span>Inserimento manuale <span className="footer-divider">/</span> Valutazioni provvisorie</span></footer></div></div></Italiano>;
+  const { user, logout } = useLocalAuth();
+  const displayName = user?.displayName || user?.userId || 'Utente';
+  return <Italiano><div className="app-frame grain"><Sidebar/><div className="app-main"><header className="topbar"><div className="crumb">CTI <ChevronRight size={13}/> <b>{traduci(title)}</b></div><div className="topbar-right"><span className="topbar-status"><span className="online-dot"/> {displayName}</span><span className="topbar-date">{new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}</span><button className="icon-button" onClick={() => void logout()} aria-label="Esci dalla piattaforma" title="Esci"><LogOut size={16}/></button></div></header><div className="notice notice-amber"><LockKeyhole size={15}/><span><b>Sessione autenticata.</b> L’accesso ai dati riservati dipende dal ruolo attivo assegnato alla piattaforma.</span></div><div className="content-wrap page-enter">{children}</div><footer className="app-footer"><span>CTI INTELLIGENCE <b>·</b> FASE 01</span><span>Inserimento manuale <span className="footer-divider">/</span> Valutazioni provvisorie</span></footer></div></div></Italiano>;
 }
 
 function Dashboard() {
@@ -467,8 +455,9 @@ function WorkspaceRoutes() {
   </Switch>;
 }
 function PublicLanding() {
-  const { isLoaded, isSignedIn } = useAuth();
-  if (isLoaded && isSignedIn) return <Redirect to="/dashboard"/>;
+  const { loading, user } = useLocalAuth();
+  if (loading) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
+  if (user) return <Redirect to="/dashboard"/>;
   return <main className="auth-landing">
     <a className="auth-brand" href={`${basePath || ''}/`}><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy"/></a>
     <div className="auth-landing-content">
@@ -477,74 +466,86 @@ function PublicLanding() {
       <p>Una piattaforma per registrare fonti autorizzate, conservare le evidenze e verificare valutazioni ed esportazioni.</p>
       <div className="auth-landing-actions">
         <Link className="btn btn-primary" href="/sign-in">Accedi alla piattaforma <ArrowRight size={16}/></Link>
-        <Link className="btn btn-outline" href="/sign-up">Crea un account</Link>
       </div>
-      <p className="auth-landing-note">L’accesso ai dati riservati dipende dal ruolo attivo assegnato alla piattaforma.</p>
+      <p className="auth-landing-note">Accesso locale con ID utente e password. Gli account sono configurati dall’amministratore.</p>
     </div>
   </main>;
 }
 function SignInPage() {
-  return <main className="auth-page"><Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`}/></main>;
-}
-function SignUpPage() {
-  return <main className="auth-page"><Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`}/></main>;
+  const { loading, user, refreshSession } = useLocalAuth();
+  const [, setLocation] = useLocation();
+  const client = useQueryClient();
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  if (loading) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
+  if (user) return <Redirect to="/dashboard"/>;
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${basePath}/api/auth/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, password }),
+      });
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(result?.error || 'Accesso non riuscito. Verifica le credenziali.');
+      await refreshSession();
+      client.clear();
+      setLocation('/dashboard');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Accesso non riuscito. Riprova.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return <main className="auth-page">
+    <Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link>
+    <section className="local-login-card">
+      <img className="local-login-logo" src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy"/>
+      <div className="eyebrow">PIATTAFORMA CTI</div>
+      <h1>Accedi alla piattaforma</h1>
+      <p>Inserisci le credenziali locali assegnate dall’amministratore.</p>
+      <form className="local-login-form" onSubmit={submit}>
+        <label className="field">
+          <span>ID utente</span>
+          <input autoComplete="username" name="userId" value={userId} onChange={event => setUserId(event.target.value)} required minLength={3} maxLength={64} autoCapitalize="none" spellCheck={false}/>
+        </label>
+        <label className="field">
+          <span>Password</span>
+          <input autoComplete="current-password" name="password" type="password" value={password} onChange={event => setPassword(event.target.value)} required maxLength={256}/>
+        </label>
+        {error && <ErrorText text={error}/>}
+        <Button type="submit" disabled={submitting || !userId || !password}>{submitting ? 'Accesso in corso…' : 'Accedi'}</Button>
+      </form>
+      <div className="local-login-note"><LockKeyhole size={14}/> Accesso protetto da sessione locale e ruolo assegnato.</div>
+    </section>
+  </main>;
 }
 function WorkspaceGate() {
-  const { isLoaded, isSignedIn } = useAuth();
-  if (!isLoaded) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
-  if (!isSignedIn) return <Redirect to="/sign-in"/>;
+  const { loading, user } = useLocalAuth();
+  if (loading) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
+  if (!user) return <Redirect to="/sign-in"/>;
   return <Router/>;
 }
 function ApplicationRoutes() {
   return <Switch>
-    <Route path="/sign-in/*?" component={SignInPage}/>
-    <Route path="/sign-up/*?" component={SignUpPage}/>
+    <Route path="/sign-in" component={SignInPage}/>
+    <Route path="/sign-up"><Redirect to="/sign-in"/></Route>
     <Route path="/" component={PublicLanding}/>
     <Route component={WorkspaceGate}/>
   </Switch>;
-}
-function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
-  const client = useQueryClient();
-  const previousUserId = useRef<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const nextUserId = user?.id ?? null;
-      if (previousUserId.current !== undefined && previousUserId.current !== nextUserId) {
-        client.clear();
-      }
-      previousUserId.current = nextUserId;
-    });
-    return unsubscribe;
-  }, [addListener, client]);
-
-  return null;
 }
 function Router() {
   const [location] = useLocation();
   return <ErrorBoundary resetKey={location}><Italiano><WorkspaceRoutes/></Italiano></ErrorBoundary>;
 }
-function ClerkApplication() {
-  const [, setLocation] = useLocation();
-  const stripBase = (path: string) =>
-    basePath && path.startsWith(basePath) ? path.slice(basePath.length) || '/' : path;
-  return <ClerkProvider
-    publishableKey={clerkPubKey}
-    proxyUrl={clerkProxyUrl}
-    appearance={clerkAppearance}
-    localization={itIT}
-    signInUrl={`${basePath}/sign-in`}
-    signUpUrl={`${basePath}/sign-up`}
-    routerPush={to => setLocation(stripBase(to))}
-    routerReplace={to => setLocation(stripBase(to), { replace: true })}
-  >
-    <ClerkQueryClientCacheInvalidator/>
-    <ApplicationRoutes/>
-  </ClerkProvider>;
-}
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><ClerkApplication/></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><LocalAuthProvider><ApplicationRoutes/></LocalAuthProvider></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
 }
 
 export default App;

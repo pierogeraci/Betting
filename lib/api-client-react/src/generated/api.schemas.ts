@@ -69,9 +69,37 @@ export const WorkspaceRole = {
 } as const;
 
 export interface WorkspaceMembership {
+  userId: string;
+  displayName: string;
   role: WorkspaceRole | null;
   /** @nullable */
   status: string | null;
+}
+
+export interface LocalLoginInput {
+  /**
+     * @minLength 3
+     * @maxLength 64
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$
+     */
+  userId: string;
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
+  password: string;
+}
+
+export interface LocalSessionUser {
+  userId: string;
+  displayName: string;
+  role: WorkspaceRole;
+  status: string;
+}
+
+export interface LocalSession {
+  authenticated: boolean;
+  user: LocalSessionUser | null;
 }
 
 export interface DashboardSummary {

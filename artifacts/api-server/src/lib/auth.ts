@@ -1,40 +1,55 @@
 import type { NextFunction, Request, Response } from "express";
-import { getAuth } from "@clerk/express";
 import { eq } from "drizzle-orm";
-import { ctiUsersTable, db } from "@workspace/db";
+import { ctiUsersTable, db, type CtiUser } from "@workspace/db";
 import { hasActiveRole } from "./permissions";
+import {
+  SESSION_COOKIE_NAME,
+  verifySessionToken,
+} from "./local-auth-crypto";
 
-export function requireAuthenticated(
+declare global {
+  namespace Express {
+    interface Request {
+      ctiUser?: CtiUser;
+    }
+  }
+}
+
+export async function requireAuthenticated(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
-  const { userId } = getAuth(req);
+): Promise<void> {
+  let userId: number | null;
+  try {
+    userId = verifySessionToken(req.cookies?.[SESSION_COOKIE_NAME]);
+  } catch {
+    userId = null;
+  }
   if (!userId) {
     res.status(401).json({ error: "È necessario accedere alla piattaforma." });
     return;
   }
+
+  const [member] = await db
+    .select()
+    .from(ctiUsersTable)
+    .where(eq(ctiUsersTable.id, userId))
+    .limit(1);
+  if (!member?.userId || member.status !== "active") {
+    res.status(401).json({ error: "La sessione non è valida o l’account non è attivo." });
+    return;
+  }
+
+  req.ctiUser = member;
   next();
 }
 
 export function requireRole(...roles: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const { userId } = getAuth(req);
-    if (!userId) {
-      res.status(401).json({ error: "È necessario accedere alla piattaforma." });
-      return;
-    }
-
-    const [member] = await db
-      .select()
-      .from(ctiUsersTable)
-      .where(eq(ctiUsersTable.clerkUserId, userId))
-      .limit(1);
-
+    const member = req.ctiUser;
     if (!member) {
-      res.status(403).json({
-        error: "L’accesso ai dati riservati richiede un membro attivo della piattaforma.",
-      });
+      res.status(401).json({ error: "È necessario accedere alla piattaforma." });
       return;
     }
 

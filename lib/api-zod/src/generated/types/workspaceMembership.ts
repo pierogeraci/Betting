@@ -8,6 +8,8 @@
 import type { WorkspaceRole } from './workspaceRole';
 
 export interface WorkspaceMembership {
+  userId: string;
+  displayName: string;
   role: WorkspaceRole | null;
   /** @nullable */
   status: string | null;

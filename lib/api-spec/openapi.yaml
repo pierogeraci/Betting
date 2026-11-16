@@ -7,8 +7,10 @@ servers:
   - url: /api
     description: Base API path
 security:
-  - clerkSession: []
+  - localSession: []
 tags:
+  - name: auth
+    description: Local user and session authentication
   - name: health
     description: Health operations
   - name: workspace
@@ -32,6 +34,55 @@ tags:
   - name: storage
     description: Private evidence and authorization-document uploads
 paths:
+  /auth/session:
+    get:
+      operationId: getLocalSession
+      tags: [auth]
+      summary: Get the current local user session
+      security: []
+      responses:
+        "200":
+          description: Current local session state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSession"
+  /auth/login:
+    post:
+      operationId: loginLocalUser
+      tags: [auth]
+      summary: Sign in with a local user ID and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocalLoginInput"
+      responses:
+        "200":
+          description: Signed-in user session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSession"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /auth/logout:
+    post:
+      operationId: logoutLocalUser
+      tags: [auth]
+      summary: End the current local user session
+      security: []
+      responses:
+        "204":
+          description: Session ended
   /healthz:
     get:
       operationId: healthCheck
@@ -683,10 +734,10 @@ paths:
           $ref: "#/components/responses/NotFound"
 components:
   securitySchemes:
-    clerkSession:
+    localSession:
       type: apiKey
       in: cookie
-      name: __session
+      name: cti_session
   parameters:
     Id:
       name: id
@@ -764,14 +815,49 @@ components:
       enum: [admin, analyst, compliance_reviewer, restricted_analyst, read_only]
     WorkspaceMembership:
       type: object
-      required: [role, status]
+      required: [userId, displayName, role, status]
       properties:
+        userId: { type: string }
+        displayName: { type: string }
         role:
           oneOf:
             - $ref: "#/components/schemas/WorkspaceRole"
             - type: "null"
         status:
           type: ["string", "null"]
+    LocalLoginInput:
+      type: object
+      required: [userId, password]
+      properties:
+        userId:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$"
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+    LocalSessionUser:
+      type: object
+      required: [userId, displayName, role, status]
+      properties:
+        userId: { type: string }
+        displayName: { type: string }
+        role:
+          $ref: "#/components/schemas/WorkspaceRole"
+        status:
+          type: string
+    LocalSession:
+      type: object
+      required: [authenticated, user]
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/LocalSessionUser"
+            - type: "null"
     DashboardSummary:
       type: object
       required: [sourceCount, sourcesInReview, approvedSources, evidenceCount, unclassifiedEvidence, siteCount, highRiskSites, eventCount, highRiskEvents, restrictedBettorCount, generatedAt]
