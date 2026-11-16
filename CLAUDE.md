@@ -2,7 +2,7 @@
 
 Prototipo di un sistema di ricerca e analisi dei siti di scommesse illegali, a partire dal dossier Soft Strategy 2020 (capitolo 4). Uso previsto: antifrode, a supporto di concessionari e autorità.
 
-La specifica completa è in `docs/soluzione.md`. Leggila prima di pianificare una fase.
+La specifica completa è in `docs/soluzione.md`. Leggila prima di pianificare una fase. Le fonti sono la relazione tecnica Soft Strategy del 23 marzo 2021 e la matrice `Risk_matrix_gambling_online_v0.5.xlsx`: il prototipo copre tutte le funzioni della relazione, nella variante consentita dai vincoli qui sotto.
 
 ## Pipeline
 
@@ -22,13 +22,13 @@ Ogni modulo legge uno stadio e scrive il successivo. Nessun modulo ne chiama un 
 | `extractors/` | OCR, trascrizione, normalizzazione del testo, analisi APK |
 | `collectors/` | Collettori di profilazione del sito, uno per area |
 | `scoring/` | Vulnerabilità, minaccia, Trust Index |
-| `console/` | Applicazione web per l'analista |
+| `console/` | Portale web per l'analista (FastAPI, Jinja2, HTMX): tutto ciò che il sistema fa si usa da qui |
 | `config/trust_index.yaml` | Pesi, soglie e matrice, con campo `version` |
 | `tests/fixtures/` | Pagine, messaggi e file di esempio per i test |
 
 ## Stack
 
-Python 3.12 · PostgreSQL · archivio a oggetti compatibile S3 · Celery con Redis (nella Fase 0 basta una tabella di lavori) · Telethon · Scrapy con Playwright · Tor come proxy SOCKS · ffmpeg · PaddleOCR PP-OCRv5 · faster-whisper · MobSF · Docker Compose.
+Python 3.12 · PostgreSQL con pgvector · archivio a oggetti compatibile S3 (SeaweedFS in locale) · coda sulla tabella `lavoro` (niente Celery né Redis) · SQLAlchemy, Alembic, psycopg · boto3 · tldextract · PyYAML · dnspython · FastAPI, Uvicorn, Jinja2, python-multipart, HTMX · Telethon · Scrapy con Playwright · Tor come proxy SOCKS · ffmpeg · PaddleOCR PP-OCRv5 · faster-whisper · Pillow, ImageHash · scikit-learn · sentence-transformers · Ollama per il modello linguistico locale · MobSF, mitmproxy, emulatore Android · pytest, httpx, ruff · Docker Compose.
 
 Non aggiungere dipendenze fuori da questo elenco senza chiedere.
 
@@ -64,18 +64,19 @@ Se un compito richiede di violare uno di questi punti, fermati e chiedi.
 - Indicatore: `valore` tra `presente`, `assente`, `non_determinabile`; `evidenza` (URL, id dello snapshot, estratto); `certezza` da 0 a 1; nome e versione del collettore.
 - "Non determinabile" non vale "assente": un dato che non si riesce a leggere non abbassa il rischio.
 - Legalità: si decide per confronto con gli elenchi ADM (concessionari, siti inibiti) caricati in tabelle dedicate. Non si deduce dal testo del sito.
-- Trust Index: pesi e soglie stanno solo in `config/trust_index.yaml`. Ogni punteggio registra la versione usata e la copertura. Sotto la soglia di copertura non si emette alcun indice.
-- Tabelle: `sonda`, `elemento_grezzo`, `media`, `estrazione`, `entita`, `sito`, `snapshot`, `indicatore`, `punteggio`, `revisione`.
+- Trust Index: segue la matrice del dossier v0.5. Vulnerabilità = somma dei pesi delle sette voci presenti; minaccia = tre variabili sulle puntate nelle 24 ore (puntata media, vincite totali, % vincite); indice = (vulnerabilità + minaccia) / 2. Pesi e soglie stanno solo in `config/trust_index.yaml`. Ogni punteggio registra la versione usata e la copertura. Senza dati di puntata la minaccia è non determinabile e non si emette alcun indice: si mostra la sola vulnerabilità.
+- Confine di raccolta: i contenitori di raccolta vedono il database solo con il ruolo `raccolta` (funzioni `lavoro_prendi` e `lavoro_chiudi`) e scrivono solo nel secchio di arrivo. Un processo interno ricalcola gli hash e scrive le tabelle.
+- Tabelle: `sonda`, `elemento_grezzo`, `media`, `estrazione`, `entita`, `sito`, `snapshot`, `indicatore`, `punteggio`, `revisione`; di servizio `lavoro`, `utente`, `adm_caricamento`, `adm_concessionario`, `adm_sito_inibito`.
 
 ## Fasi
 
 | Fase | Contenuto | Criterio di uscita |
 | --- | --- | --- |
-| 0 | Archivio, modello dati, elenchi ADM, inserimento manuale | Un URL inserito a mano produce snapshot e confronto con ADM |
-| 1 | Profilazione del sito, Trust Index, console analista | 50 siti valutati e confrontati con il giudizio di un analista |
-| 2 | Sonde: Telegram, web, Tor | La lista URL cresce da sola per due settimane |
-| 3 | OCR, trascrizione, classificatore, estrazione delle entità | Precisione e richiamo misurati sul set etichettato |
-| 4 | App Android, legal entity, anomalie sui conti, social | Un criterio per ciascun modulo |
+| 0 | Archivio, modello dati, elenchi ADM, inserimento manuale dal portale | Un URL inserito a mano produce snapshot e confronto con ADM |
+| 1 | Profilazione del sito, Trust Index secondo la matrice v0.5, portale analista, report per sito | 50 siti valutati e confrontati con il giudizio di un analista |
+| 2 | Sonde: Telegram, web, Tor; parole chiave e avvisi | La lista URL cresce da sola per due settimane |
+| 3 | OCR, trascrizione, classificatore, entità, sentiment, argomenti, emoji | Precisione e richiamo misurati sul set etichettato |
+| 4 | App Android, legal entity, anomalie sui conti, rating eventi sportivi, social | Un criterio per ciascun modulo |
 
 ## Modo di lavorare
 

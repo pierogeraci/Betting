@@ -166,28 +166,54 @@ Le sette vulnerabilità del dossier diventano indicatori a tre valori: presente,
 
 ### Minaccia
 
-Il dossier dice che la minaccia nasce da tre variabili ma non le nomina: vanno recuperate dalla matrice originale. In mancanza, propongo queste tre.
+La matrice originale è stata recuperata (`Risk_matrix_gambling_online_v0.5.xlsx`). La minaccia misura il comportamento di puntata osservato nelle 24 ore, per tipo di gioco o per l'intera piattaforma, con tre variabili che ricevono un voto da 1 a 3.
 
-- Esposizione verso l'Italia: lingua, valuta, promozione in canali italiani, presenza nell'elenco ADM dei siti inibiti.
-- Opacità dell'operatore: nessuna società dichiarata, licenza non verificabile, registrazione del dominio schermata.
-- Portata promozionale: numero di canali e annunci che rimandano al sito, pubblico di quei canali.
+| Variabile | Calcolo | Basso (1) | Medio (2) | Alto (3) |
+| --- | --- | --- | --- | --- |
+| V1 Profilo di rischio | Totale scommesso / numero di puntate, arrotondato per eccesso | < 50 € | da 50 € a meno di 250 € | ≥ 250 € |
+| V2 Rendimento totale lordo | Somma delle vincite | < 1.000 € | da 1.000 € a meno di 5.000 € | ≥ 5.000 € |
+| V3 % vincite realizzate | Numero di vittorie / numero di puntate | < 25% | da 25% a meno di 50% | ≥ 50% |
+
+Minaccia = media dei tre voti arrotondata per eccesso, moltiplicata per 3: vale 3, 6 o 9. Livelli: basso sotto 4, medio da 4 a meno di 7, alto da 7.
+
+I dati di puntata arrivano dai riquadri pubblici che il sito espone (ultime puntate, vincite recenti) o da una tabella caricata dall'analista. Una puntata conta se l'importo è maggiore di zero; l'esito è "vittoria" se l'importo vinto è maggiore di zero.
+
+Esposizione verso l'Italia, opacità dell'operatore e portata promozionale non fanno parte della matrice: restano informazioni di contesto nella scheda del sito.
 
 ### Calcolo
 
-Vulnerabilità e minaccia sono medie pesate sui soli indicatori determinati. La quota di indicatori determinati è la copertura, mostrata accanto al punteggio.
+Vulnerabilità = somma dei pesi delle voci presenti.
+
+| Voce | Peso v0.5 |
+| --- | --- |
+| Più account collegati a un unico conto | 1,5 |
+| Pagamento da conto corrente UE | 1 |
+| Assenza di registrazione | 2,5 |
+| Nessun documento richiesto all'iscrizione | 3 |
+| Pagamento tramite fornitori terzi | 2 |
+| Pagamento e puntata in criptovalute | 6 |
+| Pagamento su conto offshore | 5 |
+
+Livelli di vulnerabilità: basso sotto 6, medio da 6 a meno di 12, alto da 12.
 
 ```latex
-V = \frac{\sum_{i \in D} w_i \, v_i}{\sum_{i \in D} w_i}, \qquad
-C = \frac{|D|}{N}
+TI = \frac{V + M}{2}
 ```
 
-Nella formula D è l'insieme degli indicatori determinati, N il loro totale, w il peso, v il valore tra 0 e 1. La minaccia T si calcola allo stesso modo. V e T, divisi in livelli, entrano nella matrice che restituisce la classe di rischio: è il Trust Index della Figura 18 del dossier.
+Livelli del Trust Index: basso sotto 4, medio da 4 a 7, alto sopra 7. Con i dati d'esempio del foglio: V = 11,5, M = 6, TI = 8,75, alto. Un test riproduce questi numeri.
+
+Scostamenti dichiarati rispetto alle fonti:
+
+- La relazione riporta pesi diversi (1, 1, 2, 2, 2, 6, 6) e parla di prodotto dei due indici. Vale il foglio v0.5, più recente: pesi sopra e media.
+- Nel foglio una percentuale di vincite tra 25% e 50% non riceve alcun voto, per una condizione impossibile. Il motore applica le soglie scritte accanto alla formula.
+- Il foglio tratta una voce non rilevata come assente. Il motore distingue `non_determinabile` e mostra la copertura accanto al punteggio.
 
 Regole che precedono il calcolo:
 
 - Dominio di un concessionario ADM: escluso dalla valutazione di illegalità.
 - Dominio che espone logo o numero di concessione ADM senza comparire nell'elenco: segnalazione immediata, a prescindere dal punteggio.
-- Copertura sotto soglia: nessun indice, il sito va all'analista.
+- Dati di puntata assenti: la minaccia è non determinabile, non si emette alcun indice e il portale mostra la sola vulnerabilità.
+- Copertura delle vulnerabilità sotto soglia: nessun indice, il sito va all'analista.
 
 ### Tenuta nel tempo
 
@@ -195,7 +221,35 @@ Regole che precedono il calcolo:
 - Validazione: l'analista valuta a mano un campione di una cinquantina di siti; si misura la concordanza con la classe automatica e si tarano i pesi.
 - Solo dopo, con abbastanza casi validati, ha senso sostituire i pesi fissati a mano con un modello statistico.
 
-Il rating degli eventi sportivi a rischio di combine, citato nel dossier, richiede serie storiche di quote e volumi. Non rientra in questa matrice e lo terrei fuori dal primo ciclo.
+Il rating degli eventi sportivi a rischio di combine richiede serie storiche di quote e volumi, che dall'esterno non si raccolgono. Il modulo lavora su serie caricate dall'analista e resta separato da questa matrice.
+
+## Funzioni della relazione tecnica
+
+La relazione del 23 marzo 2021 descrive funzioni che il prototipo deve coprire. Quelle compatibili con i vincoli entrano così come sono; le altre entrano nella variante consentita.
+
+| Area | Funzione |
+| --- | --- |
+| Raccolta | Elenco di parole chiave multilingue gestito dal portale; avviso all'analista quando una sonda trova un messaggio utile; sorveglianza delle directory del dark web |
+| Video | Tag per fotogramma con il tempo, ricerca per tag fra i video, riconoscimento di loghi |
+| Audio | Trascrizione a blocchi, traduzione facoltativa, riassunto e punti chiave, testo scaricabile |
+| Linguaggio | Entità, sentiment, riassunto, argomenti, dizionario delle emoji con significato per piattaforma |
+| Profilazione del sito | Classificatore di pagine di gioco, tipi di gioco e loro raggruppamento, link di pagamento rapido osservati senza compilarli, chat dal vivo e servizi di immagini esterni, somiglianza della struttura HTML |
+| Giochi | Classificazione per struttura, natura del rischio, numero dei soggetti, complessità, disciplina |
+| Eventi sportivi | Rating del rischio di frode su serie di quote caricate |
+| Correlazione | Grafo delle entità in PostgreSQL, consultabile dal portale |
+| Report | Report di intelligence per sito, esportabile |
+
+| Nella relazione | Variante consentita |
+| --- | --- |
+| Captcha solver, rimozione del flag di automazione, rotazione di impronta e proxy | Browser dichiarato; pagina bloccata in revisione manuale |
+| VPN per siti non accessibili dall'Italia | Blocco geografico registrato come evidenza |
+| Telegram: gruppi privati, mittente, profilo utente | Solo canali e gruppi pubblici, nessun dato sull'autore |
+| Sonda Telegram mascherata da utente umano | Account dedicato che rispetta le attese del servizio |
+| Profili degli scommettitori scaricati dai siti | Le otto anomalie della relazione su dati sintetici o dell'operatore |
+| Scraping di profili Facebook | Caricamento manuale |
+| Addestramento su pubblicità raccolte da Telegram | Modelli pre-addestrati; esempi solo da fonti non Telegram |
+| Servizi cloud di trascrizione | Trascrizione in locale |
+| Database a grafo Neo4j | Tabelle di entità e legami in PostgreSQL |
 
 ## Modello dati e stack tecnologico
 
@@ -219,7 +273,7 @@ Un solo database relazionale e un solo archivio di file sostituiscono i file di 
 | Codice | Python | Invariato |
 | Database | PostgreSQL, con ricerca testuale e vettoriale | File di testo, CSV, fogli |
 | File grezzi | Archivio a oggetti compatibile S3 | Cartelle locali |
-| Code di lavoro | Celery con Redis; per iniziare basta una tabella di lavori | Avvio manuale degli script |
+| Code di lavoro | Tabella di lavori in PostgreSQL | Avvio manuale degli script |
 | Telegram | Telethon | Script del 2019-2020 |
 | Crawler | Scrapy con Playwright | pyspider, Selenium, Geckodriver |
 | Tor | Demone Tor come proxy SOCKS | Tor Browser automatizzato |
@@ -227,7 +281,7 @@ Un solo database relazionale e un solo archivio di file sostituiscono i file di 
 | Audio | ffmpeg, faster-whisper | Servizi cloud e passaggi manuali |
 | Linguaggio | Modello multilingue pre-addestrato, modello linguistico in locale | ULMFiT, ELMo |
 | App Android | MobSF, emulatore ufficiale, proxy di intercettazione | ApkAnalyzer, BlueStacks |
-| Console analista | Applicazione web semplice sul database | Lettura manuale dei file |
+| Portale analista | FastAPI, Jinja2, HTMX | Lettura manuale dei file |
 | Esecuzione | Docker Compose su una macchina con GPU | Macchine virtuali separate |
 
 Crawler, Tor e ambiente di analisi degli APK vivono in una rete separata dal resto. Trattano contenuti ostili e non devono vedere il database se non attraverso la coda.
@@ -266,7 +320,7 @@ Due decisioni sono prese: dati reali fin dall'inizio e sonda Telegram attiva. Ne
 
 - [ ] Chi è il destinatario dei prototipi e con quale titolo raccoglie i dati.
 - [ ] Definire la base giuridica del trattamento dei dati raccolti.
-- [ ] Recuperare la matrice originale a quattro fogli, con i pesi e le tre variabili della minaccia.
+- [x] Recuperare la matrice originale a quattro fogli, con i pesi e le tre variabili della minaccia.
 - [ ] Verificare se esiste ancora il codice delle sonde Telegram del 2019-2020.
 - [ ] Decidere se cercare un partner accademico per l'accesso ai dati Meta.
 - [ ] Confermare la disponibilità di una macchina con GPU.
