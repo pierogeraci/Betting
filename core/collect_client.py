@@ -64,6 +64,10 @@ class CollectClient:
             ).fetchone()
         return bool(row and row[0])
 
+    def read_work(self, key: str) -> bytes:
+        """Legge un file dal secchio di lavorazione: l'unico che i contenitori di estrazione e APK possono leggere."""
+        return self._store.get(get_settings().s3_work_bucket, key)
+
     def upload(
         self, job_id: int, name: str, data: bytes, content_type: str = "application/octet-stream"
     ) -> str:

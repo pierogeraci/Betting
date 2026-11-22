@@ -6,7 +6,7 @@ COMPOSE := BUILDX_BAKE_ENTITLEMENTS_FS=0 docker compose -f compose.yaml $(COMPOS
 LIMITE ?=
 SONDA ?=
 
-.PHONY: help setup env up up-raccolta up-app apk-dinamica anomalie down init test lint collect test-integration create-user telegram-login eval
+.PHONY: help setup env up up-raccolta up-app apk-dinamica modelli anomalie down init test lint collect test-integration create-user telegram-login eval
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  %-18s %s\n", $$1, $$2}'
@@ -57,9 +57,15 @@ up-app: ## Avvia l'analisi statica degli APK (MobSF su rete interna senza Intern
 	$(COMPOSE) --profile app up -d --build mobsf apk
 
 apk-dinamica: ## Una analisi dinamica di APK in coda: emulatore usa e getta + mitmproxy (serve KVM)
+	-$(COMPOSE) --profile apk-dinamica rm -sfv emulatore mitm
+	-docker volume rm -f betting_flussi_mitm
 	$(COMPOSE) --profile apk-dinamica up -d emulatore mitm
-	$(COMPOSE) --profile apk-dinamica run --rm apk-dinamica
+	-$(COMPOSE) --profile apk-dinamica run --rm apk-dinamica
 	$(COMPOSE) --profile apk-dinamica rm -sfv emulatore mitm
+	-docker volume rm -f betting_flussi_mitm
+
+modelli: ## Scarica una volta i modelli di OCR e trascrizione nel volume `modelli` (serve la rete)
+	$(COMPOSE) --profile raccolta run --rm --no-deps -v betting_modelli:/modelli -e HF_HUB_OFFLINE=0 --entrypoint python estrazione -c "from extractors.media import ocr_engine; ocr_engine(); import os; from faster_whisper import WhisperModel; WhisperModel(os.environ.get('MODELLO_TRASCRIZIONE', 'large-v3'))"
 
 anomalie: ## Anomalie sui conti, solo dati sintetici, da terminale
 	$(PY) -c "from scoring.anomalies import run; import json; print(json.dumps(run()['valutazione'], indent=1))"

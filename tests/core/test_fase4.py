@@ -51,7 +51,16 @@ def test_flows_summary():
         json.dumps({"t": 11, "url": "https://ads.example-net.com/y", "byte": 50}),
     ]
     out = flows_summary(lines, since=9)
-    assert out == {"richieste": 2, "domini": [{"host": "ads.example-net.com", "richieste": 2, "byte": 150}]}
+    assert out["richieste"] == 2 and out["domini"] == [
+        {"host": "ads.example-net.com", "richieste": 2, "byte": 150}
+    ]
+    blocked = flows_summary(
+        [json.dumps({"t": 10, "url": "https://reg.casino.example/signup", "bloccato": True})], since=0
+    )
+    assert (
+        blocked["invii_bloccati"] == [{"host": "reg.casino.example", "tentativi": 1}]
+        and blocked["richieste"] == 0
+    )
 
 
 def _site_with_company(db, domain, company, number=None):
@@ -83,14 +92,21 @@ def _site_with_company(db, domain, company, number=None):
     return site
 
 
-REGISTRY = (
-    b"nome;paese;numero;stato\nMoon Gaming N.V.;Curacao;154321;attiva\nSun Bet Ltd;Malta;C999;attiva\n;;;\n"
-)
+REGISTRY = b"nome;paese;numero;stato;amministratore\nMoon Gaming N.V.;Curacao;154321;attiva;Mario Rossi\nSun Bet Ltd;Malta;C999;attiva;Anna Bianchi\n;;;;\nGiuseppe Verdi;Italia;X1;attiva;\n"
 
 
 def test_legal_entity_candidates(db, store):
     n, errors = legal.load_registry(db, "societa", REGISTRY, "Registro di prova")
-    assert n == 2 and errors == ["Riga 4: nome mancante"]
+    assert n == 2 and "Colonne ignorate e non conservate: amministratore" in errors
+    assert "Riga 4: nome mancante" in errors and any("Riga 5: senza forma giuridica" in e for e in errors)
+    from core.models import ElementoGrezzo, RegistroVoce
+    from core.storage import read_archive
+
+    stored = read_archive(
+        db.query(ElementoGrezzo).filter(ElementoGrezzo.fonte == "registro:societa").one().oggetto_chiave
+    )
+    assert b"Mario Rossi" not in stored and b"Giuseppe Verdi" not in stored
+    assert all(v.dettagli == {} for v in db.query(RegistroVoce))
     assert legal.load_registry(db, "societa", REGISTRY, "x")[0] == 0  # stesso file: nessun doppione
     site = _site_with_company(db, "luckymoon.example.com", "MOON GAMING NV", "154321")
     best = legal.candidates(db, site)[0]
@@ -179,3 +195,37 @@ def test_profiling_without_snapshots(db, store):
     assert profiling.profile_site(db, intake.get_or_create_site(db, "vuoto.example.com")) == {
         "saltato": "nessuno snapshot"
     }
+
+
+def test_certificate_subject_keeps_only_companies():
+    from probes.apk.static import company_subject
+
+    assert company_subject("CN=Mario Rossi, O=Moon Gaming N.V., C=CW") == "O=Moon Gaming N.V., C=CW"
+    assert company_subject("CN=Mario Rossi, O=Mario Rossi, C=IT, EMAILADDRESS=m@x.it") is None
+
+
+def test_event_without_computable_signals():
+    rows = [
+        {
+            "bookmaker": "A",
+            "momento": datetime(2026, 11, 1, tzinfo=UTC),
+            "esito": "1",
+            "quota": 2.0,
+            "volume": None,
+        }
+    ]
+    out = events.rate(rows, None)
+    assert out["rating"] == "non_determinabile" and not any(out["calcolabili"].values())
+
+
+def test_apk_job_reads_only_work_bucket():
+    from core.collect_client import CollectClient, CollectJob
+    from core.storage import MemoryStore
+    from probes.apk import static
+
+    store = MemoryStore()
+    store.put("betting-lavorazione", "abc", b"non un apk")
+    client = CollectClient(dsn="postgresql://x", store=store, worker="t")
+    static.run_job(client, CollectJob(5, "apk", {"chiave": "abc", "media_id": 1}, 1))
+    manifest = json.loads(store.get("prova-arrivo", "5/manifesto.json"))
+    assert manifest["esito"] == "errore" and "non è un APK" in manifest["errore"]

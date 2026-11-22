@@ -84,6 +84,21 @@ def registrable(host: str) -> str:
     return ".".join(parts[-2:]) if len(parts) >= 2 else host
 
 
+COMPANY_FORM = re.compile(
+    r"(?i)\b(s\.?p\.?a|s\.?r\.?l|ltd|limited|n\.?v|b\.?v|gmbh|llc|s\.?a|inc|corp|plc|o[uü]|sia|s\.?l)\b"
+)
+
+
+def company_subject(subject: str) -> str | None:
+    """Del soggetto del certificato restano solo organizzazione e paese, e solo se è una società:
+    CN ed email spesso sono il nome di uno sviluppatore."""
+    parts = dict(re.findall(r"(?:^|,\s*)(O|C)=([^,]+)", subject or ""))
+    org = parts.get("O", "").strip()
+    if not org or not COMPANY_FORM.search(org):
+        return None
+    return f"O={org[:200]}" + (f", C={parts['C'].strip()[:4]}" if parts.get("C") else "")
+
+
 def summarize(report: dict[str, Any]) -> dict[str, Any]:
     """Riassunto del rapporto MobSF: solo ciò che serve a collegare l'app ai siti e all'operatore."""
     permissions = report.get("permissions") or {}
@@ -123,7 +138,7 @@ def summarize(report: dict[str, Any]) -> dict[str, Any]:
         "url": urls,
         "certificato": {
             "sha256": sha256.group(1).lower() if sha256 else None,
-            "soggetto": subject.group(1).strip()[:300] if subject else None,
+            "soggetto": company_subject(subject.group(1) if subject else ""),
         },
         "attivita": len(report.get("activities") or []),
         "servizi": len(report.get("services") or []),
@@ -132,9 +147,7 @@ def summarize(report: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_job(client: Any, job: Any) -> dict[str, Any]:
-    from core.config import get_settings
-
-    data = client.reader().get(get_settings().s3_work_bucket, str(job.payload.get("chiave", "")))
+    data = client.read_work(str(job.payload.get("chiave", "")))
     manifest: dict[str, Any] = {
         "raccolto_il": datetime.now(UTC).isoformat(),
         "media_id": job.payload.get("media_id"),

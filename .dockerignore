@@ -1,0 +1,15 @@
+.git
+.venv
+.env
+.env.*
+!.env.example
+**/__pycache__
+.pytest_cache
+.ruff_cache
+betting.egg-info
+data
+storage
+snapshots
+models
+*.apk
+*.session

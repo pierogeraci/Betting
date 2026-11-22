@@ -1,10 +1,11 @@
-"""Analisi dinamica di un APK: emulatore Android ufficiale usa e getta e proxy di intercettazione.
+"""Analisi dinamica di un APK: emulatore Android usa e getta e proxy di intercettazione.
 
-Gira solo nel profilo `apk-dinamica`, su rete separata, con un emulatore che si
-ricrea a ogni analisi. L'app viene installata, avviata e stimolata con eventi
-casuali (monkey) per un tempo fisso; il traffico verso i servizi pubblicitari e i
-siti di gioco passa da mitmproxy, che ne registra solo indirizzi e metadati.
-Non si inseriscono credenziali, non si creano account, non si fanno pagamenti.
+Gira solo nel profilo `apk-dinamica`, con un emulatore che si ricrea a ogni analisi
+su una rete interna: l'unica uscita è mitmproxy, che non vede la rete di raccolta.
+L'app viene installata e soltanto avviata (attività principale), poi osservata in modo
+passivo per un tempo fisso: nessun tocco o testo casuale, che potrebbe compilare moduli
+o premere un pulsante di deposito. mitmproxy registra solo indirizzi e metadati e blocca
+ogni invio di dati verso domini che non sono librerie note.
 """
 
 from __future__ import annotations
@@ -23,19 +24,20 @@ from urllib.parse import urlsplit
 ADB = os.environ.get("ADB", "adb")
 EMULATOR = os.environ.get("EMULATORE", "emulatore:5555")
 FLOWS = Path(os.environ.get("FLUSSI_MITM", "/flussi/flussi.jsonl"))
-DURATA_S = int(os.environ.get("DURATA_ANALISI_S", "600"))
+DURATA_S = int(os.environ.get("DURATA_ANALISI_S", "300"))
 
 
 def adb(*args: str, timeout: int = 120) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603 - binario fisso, argomenti costruiti qui
         [ADB, "-s", EMULATOR, *args], capture_output=True, text=True, timeout=timeout, check=False
-    )  # noqa: S603
+    )
 
 
 def flows_summary(lines: list[str], since: float) -> dict[str, Any]:
-    """Domini contattati dall'app (righe JSON scritte dallo script di mitmproxy)."""
+    """Domini contattati dall'app e invii bloccati (righe JSON scritte dallo script di mitmproxy)."""
     hosts: Counter[str] = Counter()
     sizes: Counter[str] = Counter()
+    blocked: Counter[str] = Counter()
     for line in lines:
         try:
             flow = json.loads(line)
@@ -44,19 +46,22 @@ def flows_summary(lines: list[str], since: float) -> dict[str, Any]:
         if float(flow.get("t", 0)) < since:
             continue
         host = (urlsplit(str(flow.get("url", ""))).hostname or "").lower()
-        if host:
-            hosts[host] += 1
-            sizes[host] += int(flow.get("byte", 0) or 0)
+        if not host:
+            continue
+        if flow.get("bloccato"):
+            blocked[host] += 1
+            continue
+        hosts[host] += 1
+        sizes[host] += int(flow.get("byte", 0) or 0)
     return {
         "richieste": sum(hosts.values()),
         "domini": [{"host": h, "richieste": c, "byte": sizes[h]} for h, c in hosts.most_common(200)],
+        "invii_bloccati": [{"host": h, "tentativi": c} for h, c in blocked.most_common(50)],
     }
 
 
 def run_job(client: Any, job: Any) -> dict[str, Any]:
-    from core.config import get_settings
-
-    data = client.reader().get(get_settings().s3_work_bucket, str(job.payload.get("chiave", "")))
+    data = client.read_work(str(job.payload.get("chiave", "")))
     manifest: dict[str, Any] = {
         "raccolto_il": datetime.now(UTC).isoformat(),
         "media_id": job.payload.get("media_id"),
@@ -68,20 +73,10 @@ def run_job(client: Any, job: Any) -> dict[str, Any]:
         started = time.time()
         steps = [adb("install", "-r", "-g", str(apk), timeout=300)]
         if package:
-            steps.append(
-                adb(
-                    "shell",
-                    "monkey",
-                    "-p",
-                    package,
-                    "--throttle",
-                    "500",
-                    "-s",
-                    "42",
-                    str(DURATA_S * 2),
-                    timeout=DURATA_S + 120,
-                )
-            )
+            # Solo l'avvio dell'attività principale, poi osservazione passiva.
+            steps.append(adb("shell", "monkey", "-p", package, "-c", "android.intent.category.LAUNCHER", "1"))
+            time.sleep(DURATA_S)
+            steps.append(adb("shell", "am", "force-stop", package))
             steps.append(adb("uninstall", package))
         errors = [s.stderr.strip()[:300] for s in steps if s.returncode != 0]
     lines = FLOWS.read_text(encoding="utf-8").splitlines() if FLOWS.exists() else []

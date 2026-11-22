@@ -131,3 +131,56 @@ def test_topics(db):
     assert analysis.compute_topics(db)["argomenti"] >= 2
     assert db.query(Modello).filter(Modello.nome == "argomenti").one().metriche["argomenti"][0]["parole"]
     assert db.query(Entita).count() == 0
+
+
+def test_telegram_content_never_trains(db, store):
+    _labelled(db, 30, "web")
+    # Contenuti Telegram arrivati per altre vie: riferimento t.me o provenienza dichiarata.
+    for i in range(6):
+        el = ElementoGrezzo(
+            fonte="web",
+            tipo="pagina",
+            riferimento=f"https://t.me/s/canale/{i}",
+            contenuto="bonus casino slot",
+            sha256=hashlib.sha256(f"tme{i}".encode()).hexdigest(),
+        )
+        db.add(el)
+        db.flush()
+        db.add(Etichetta(elemento_grezzo_id=el.id, pubblicita_gioco=True, entita={}))
+    up = intake.submit_file(db, "screen.png", b"png finto", provenance="telegram")
+    db.add(Etichetta(elemento_grezzo_id=up.element.id, pubblicita_gioco=True, entita={}))
+    db.flush()
+    assert analysis.training_source(up.element) == "telegram"
+    analysis.train_classifier(db)
+    model = db.query(Modello).filter(Modello.nome == "classificatore", Modello.attivo.is_(True)).one()
+    assert model.metriche["esempi_addestramento"] == 30 and model.metriche["telegram_esclusi"] == 6
+
+
+def test_topics_exclude_telegram(db):
+    for i in range(12):
+        db.add(
+            ElementoGrezzo(
+                fonte="telegram",
+                tipo="messaggio",
+                riferimento=f"https://t.me/c/{i}",
+                contenuto="bonus casino slot giri gratis " * 3,
+                sha256=hashlib.sha256(f"tg{i}".encode()).hexdigest(),
+            )
+        )
+    db.flush()
+    assert analysis.compute_topics(db)["documenti"] == 0
+
+
+def test_channel_names_not_stored_in_analysis(db, store):
+    el = ElementoGrezzo(
+        fonte="web",
+        tipo="pagina",
+        riferimento="x",
+        contenuto="scrivi a t.me/supporto_mario per il bonus casino",
+        sha256="f" * 64,
+    )
+    db.add(el)
+    db.flush()
+    analysis.analyse_element(db, el)
+    an = db.query(Estrazione).filter(Estrazione.tipo == "analisi").one()
+    assert "supporto_mario" not in json.dumps(an.metadati) and an.metadati["campi"]["canali"] == 1

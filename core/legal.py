@@ -51,10 +51,21 @@ def similarity(a: str, b: str) -> float:
     return round(max(SequenceMatcher(None, a, b).ratio(), jaccard), 3)
 
 
+COLUMNS = ("nome", "paese", "numero", "stato")
+LEGAL_FORM = re.compile(
+    SUFFIXES + r"|\b(società|societa|company|corporation|holding|group|gaming|entertainment)\b", re.I
+)
+
+
 def load_registry(
     session: Session, kind: str, data: bytes, source: str, user_id: int | None = None
 ) -> tuple[int, list[str]]:
-    """Carica un registro (CSV con colonne nome, paese, numero, stato). Le altre colonne finiscono nei dettagli."""
+    """Carica un registro di società o di licenze: CSV con colonne nome, paese, numero, stato.
+
+    Si conservano solo queste quattro colonne e solo le voci con una forma giuridica:
+    amministratori, soci, codici fiscali o ditte individuali non entrano nel sistema.
+    Nell'archivio grezzo va la versione ripulita del file, con il suo hash, non l'originale.
+    """
     if kind not in {"societa", "licenze"}:
         raise ValueError("Registro sconosciuto.")
     text = data.decode("utf-8-sig", errors="replace")
@@ -63,14 +74,34 @@ def load_registry(
     fields = {f.strip().lower() for f in reader.fieldnames or []}
     if "nome" not in fields:
         raise ValueError("Il file deve avere almeno la colonna «nome» (facoltative: paese, numero, stato).")
-    digest, key = archive_bytes(data, "text/csv")
+    kept, errors = [], []
+    ignored = sorted(fields - set(COLUMNS))
+    if ignored:
+        errors.append(f"Colonne ignorate e non conservate: {', '.join(ignored[:10])}")
+    for n, raw in enumerate(reader, start=2):
+        row = {
+            k.strip().lower(): (v or "").strip() for k, v in raw.items() if k and k.strip().lower() in COLUMNS
+        }
+        if not row.get("nome"):
+            errors.append(f"Riga {n}: nome mancante")
+            continue
+        if not LEGAL_FORM.search(row["nome"]):
+            errors.append(f"Riga {n}: senza forma giuridica, scartata (solo persone giuridiche)")
+            continue
+        kept.append([row.get(c, "")[:300] for c in COLUMNS])
+    clean = io.StringIO()
+    writer = csv.writer(clean, delimiter=";")
+    writer.writerow(COLUMNS)
+    writer.writerows(kept)
+    cleaned = clean.getvalue().encode("utf-8")
+    digest, key = archive_bytes(cleaned, "text/csv")
     element = session.execute(
         select(ElementoGrezzo).where(
             ElementoGrezzo.fonte == f"registro:{kind}", ElementoGrezzo.sha256 == digest
         )
     ).scalar_one_or_none()
     if element is not None:
-        return 0, ["Questo file è già stato caricato."]
+        return 0, ["Questo registro è già stato caricato."]
     element = ElementoGrezzo(
         fonte=f"registro:{kind}",
         tipo="registro",
@@ -78,32 +109,26 @@ def load_registry(
         oggetto_chiave=key,
         sha256=digest,
         inserito_da=user_id,
+        metadati={"voci": len(kept), "sha256_file_originale": sha256_hex(data)},
     )
     session.add(element)
     session.flush()
-    count, errors = 0, []
-    for n, raw in enumerate(reader, start=2):
-        row = {k.strip().lower(): (v or "").strip() for k, v in raw.items() if k}
-        if not row.get("nome"):
-            errors.append(f"Riga {n}: nome mancante")
-            continue
-        extra = {k: v for k, v in row.items() if k not in {"nome", "paese", "numero", "stato"} and v}
+    for name, country, number, state in kept:
         session.add(
             RegistroVoce(
                 registro=kind,
                 fonte=source[:200],
-                nome=row["nome"][:300],
-                nome_normalizzato=normalize_company(row["nome"])[:300],
-                paese=row.get("paese", "")[:60],
-                numero=row.get("numero", "")[:80],
-                stato=row.get("stato", "")[:60],
-                dettagli=extra,
+                nome=name,
+                nome_normalizzato=normalize_company(name)[:300],
+                paese=country[:60],
+                numero=number[:80],
+                stato=state[:60],
+                dettagli={},
                 elemento_grezzo_id=element.id,
             )
         )
-        count += 1
     session.flush()
-    return count, errors
+    return len(kept), errors
 
 
 def _latest(session: Session, site_id: int) -> dict[str, Indicatore]:

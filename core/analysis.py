@@ -140,6 +140,18 @@ def analyse_element(session: Session, element: ElementoGrezzo) -> dict[str, Any]
     }
 
 
+def training_source(element: ElementoGrezzo) -> str:
+    """Fonte ai fini dell'addestramento: Telegram anche quando il contenuto arriva da Telegram per altre vie."""
+    meta = element.metadati or {}
+    if (
+        element.fonte == "telegram"
+        or "t.me/" in (element.riferimento or "")
+        or meta.get("provenienza") == "telegram"
+    ):
+        return "telegram"
+    return element.fonte
+
+
 def labelled_examples(session: Session) -> list[tuple[Etichetta, ElementoGrezzo, str]]:
     rows = session.execute(
         select(Etichetta, ElementoGrezzo).join(
@@ -155,7 +167,7 @@ def train_classifier(session: Session, user_id: int | None = None, seed: int = 0
         for lab, el, txt in labelled_examples(session)
         if lab.pubblicita_gioco is not None and txt
     ]
-    examples = [Example(txt, bool(lab.pubblicita_gioco), el.fonte) for lab, el, txt in data]
+    examples = [Example(txt, bool(lab.pubblicita_gioco), training_source(el)) for lab, el, txt in data]
     allowed = [e for e in examples if e.source.split(":")[0] != "telegram"]
     # Valutazione: 25% degli esempi non Telegram tenuti da parte; gli esempi Telegram solo in valutazione.
     rng = random.Random(seed)
@@ -247,13 +259,15 @@ def evaluate_entities(session: Session) -> dict[str, Any]:
 
 
 def compute_topics(session: Session, limit: int = 2000) -> dict[str, Any]:
+    """Argomenti (LDA) sui testi raccolti. Stimare l'LDA è addestrare un modello: i dati Telegram restano fuori."""
     from extractors.topics import topics
 
     elements = (
         session.execute(
             select(ElementoGrezzo)
             .where(
-                ElementoGrezzo.fonte.in_(["telegram", "web", "tor", "manuale"]),
+                ElementoGrezzo.fonte.in_(["web", "tor", "manuale"]),
+                ~ElementoGrezzo.riferimento.contains("t.me/"),
                 ElementoGrezzo.contenuto.isnot(None),
             )
             .order_by(ElementoGrezzo.raccolto_il.desc())

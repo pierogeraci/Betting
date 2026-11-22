@@ -164,11 +164,14 @@ services:
       RACCOLTA_S3_ACCESS_KEY: ${ESTRAZIONE_S3_ACCESS_KEY:?manca ESTRAZIONE_S3_ACCESS_KEY in .env}
       RACCOLTA_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
       MODELLO_TRASCRIZIONE: ${MODELLO_TRASCRIZIONE:-large-v3}
-    volumes: [modelli:/modelli]
+      HF_HUB_OFFLINE: "1"
+    # I modelli si scaricano una volta con `make modelli`; qui sono in sola lettura.
+    volumes: ["modelli:/modelli:ro"]
     networks: [raccolta]
+    read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
-    tmpfs: ["/tmp:size=2g"]
+    tmpfs: ["/tmp:size=2g", "/home/estrazione:size=64m,uid=10002"]
     mem_limit: 8g
     pids_limit: 512
     profiles: [raccolta]
@@ -218,11 +221,14 @@ services:
       init: {condition: service_completed_successfully}
     restart: unless-stopped
 
-  # Analisi dinamica: emulatore Android ufficiale usa e getta e mitmproxy. Richiede KVM.
+  # Analisi dinamica: emulatore Android usa e getta (immagine di terzi budtmo/docker-android,
+  # con l'emulatore ufficiale di Android) e mitmproxy. Richiede KVM. L'emulatore sta su una rete
+  # interna e può uscire solo attraverso mitmproxy, che non vede la rete di raccolta.
   # Si avvia solo su richiesta: make apk-dinamica.
   emulatore:
     image: ${IMMAGINE_EMULATORE:-budtmo/docker-android:emulator_14.0}
     devices: ["/dev/kvm"]
+    security_opt: ["no-new-privileges:true"]
     environment:
       EMULATOR_DEVICE: "Samsung Galaxy S10"
       EMULATOR_ADDITIONAL_ARGS: "-http-proxy http://mitm:8080 -no-snapshot -wipe-data"
@@ -237,7 +243,9 @@ services:
     volumes:
       - ./probes/apk/mitm_log.py:/script/mitm_log.py:ro
       - flussi_mitm:/flussi
-    networks: [app_dinamica, raccolta]
+    networks: [app_dinamica, uscita_apk]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
     profiles: [apk-dinamica]
 
   apk-dinamica:
@@ -254,7 +262,7 @@ services:
       RACCOLTA_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
       EMULATORE: emulatore:5555
       FLUSSI_MITM: /flussi/flussi.jsonl
-      DURATA_ANALISI_S: ${DURATA_ANALISI_S:-600}
+      DURATA_ANALISI_S: ${DURATA_ANALISI_S:-300}
     volumes: [flussi_mitm:/flussi:ro]
     networks: [raccolta, app_dinamica]
     profiles: [apk-dinamica]
@@ -265,6 +273,8 @@ networks:
   app:
     internal: true
   app_dinamica:
+    internal: true
+  uscita_apk:
 
 volumes:
   dati_db:

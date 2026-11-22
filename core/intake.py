@@ -16,6 +16,8 @@ from core.models import ElementoGrezzo, Entita, Lavoro, LegameEntita, Media, Men
 from core.storage import archive_bytes, sha256_hex
 
 MANUAL = "manuale"
+# Da dove arriva un file caricato a mano. "telegram" lo esclude da ogni addestramento.
+PROVENANCES = {"telegram", "wechat", "facebook", "instagram", "vk", "sito", "app", "altro"}
 
 
 @dataclass
@@ -144,7 +146,12 @@ class FileSubmission:
 
 
 def submit_file(
-    session: Session, filename: str, data: bytes, user_id: int | None = None, note: str = ""
+    session: Session,
+    filename: str,
+    data: bytes,
+    user_id: int | None = None,
+    note: str = "",
+    provenance: str = "",
 ) -> FileSubmission:
     """Archivia un file caricato dall'analista. Il file non viene mai aperto né eseguito qui."""
     if not data:
@@ -165,7 +172,10 @@ def submit_file(
         oggetto_chiave=key,
         sha256=digest,
         inserito_da=user_id,
-        metadati={"nota": note.strip()[:2000]},
+        metadati={
+            "nota": note.strip()[:2000],
+            "provenienza": provenance if provenance in PROVENANCES else "altro",
+        },
     )
     session.add(element)
     session.flush()

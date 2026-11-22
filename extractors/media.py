@@ -42,7 +42,16 @@ class Result:
 
 def ffmpeg(*args: str) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(
-        ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", *args],  # noqa: S603, S607 - binario fisso
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-protocol_whitelist",
+            "file,pipe",
+            *args,
+        ],  # noqa: S603, S607 - binario fisso
         capture_output=True,
         timeout=FFMPEG_TIMEOUT,
         check=False,
@@ -59,6 +68,8 @@ def scene_frames(video: Path, workdir: Path) -> list[Frame]:
             "ffmpeg",
             "-hide_banner",
             "-nostdin",
+            "-protocol_whitelist",
+            "file",
             "-i",
             str(video),
             "-vf",
@@ -245,6 +256,8 @@ def has_audio(path: Path) -> bool:
             "ffprobe",
             "-v",
             "error",
+            "-protocol_whitelist",
+            "file",
             "-select_streams",
             "a",
             "-show_entries",
@@ -268,10 +281,22 @@ def keyframe_bytes(frame: Frame) -> bytes:
     return buffer.getvalue()
 
 
+PLAYLIST_MARKERS = (b"#EXTM3U", b"ffconcat", b"[playlist]", b"<?xml", b"<SMIL", b"<smil")
+
+
+def is_playlist(data: bytes) -> bool:
+    """Playlist e liste di concatenazione farebbero leggere a ffmpeg altri file o URL: si rifiutano."""
+    head = data[:512].lstrip()
+    return any(head.startswith(m) for m in PLAYLIST_MARKERS) or b"#EXT-X-" in head
+
+
 def process(data: bytes, kind: str, translate: bool = False) -> Result:
     from PIL import Image
 
     result = Result()
+    if kind in {"video", "audio"} and is_playlist(data):
+        result.errors.append("Il file è una playlist o una lista di file, non un video: non elaborato")
+        return result
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         source = work / "sorgente.bin"
@@ -308,12 +333,9 @@ def process(data: bytes, kind: str, translate: bool = False) -> Result:
 
 def run_job(client: Any, job: Any) -> dict[str, Any]:
     """Lavoro `estrai_media`: legge dal secchio di lavorazione, scrive manifesto e fotogrammi nel secchio di arrivo."""
-    from core.config import get_settings
-
     key = str(job.payload.get("chiave", ""))
     kind = str(job.payload.get("tipo", ""))
-    store = client.reader()
-    data = store.get(get_settings().s3_work_bucket, key)
+    data = client.read_work(key)
     result = process(data, kind, translate=bool(job.payload.get("traduci")))
     manifest = {
         "esito": "riuscito",

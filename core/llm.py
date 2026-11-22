@@ -11,7 +11,11 @@ import os
 import urllib.request
 from typing import Any
 
-URL = os.environ.get("OLLAMA_URL", "")
+
+def _url() -> str:
+    return os.environ.get("OLLAMA_URL", "")
+
+
 MODEL = os.environ.get("OLLAMA_MODELLO", "qwen2.5:7b-instruct")
 SCHEMA = {
     "type": "object",
@@ -34,11 +38,11 @@ PROMPT = (
 
 
 def available() -> bool:
-    return bool(URL)
+    return bool(_url())
 
 
 def extract_fields(text: str, timeout: int = 60) -> dict[str, Any] | None:
-    if not URL:
+    if not _url():
         return None
     body = json.dumps(
         {
@@ -50,7 +54,7 @@ def extract_fields(text: str, timeout: int = 60) -> dict[str, Any] | None:
         }
     ).encode()
     request = urllib.request.Request(
-        URL.rstrip("/") + "/api/generate", data=body, headers={"Content-Type": "application/json"}
+        _url().rstrip("/") + "/api/generate", data=body, headers={"Content-Type": "application/json"}
     )  # noqa: S310
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 - servizio interno configurato

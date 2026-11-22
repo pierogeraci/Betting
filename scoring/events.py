@@ -120,12 +120,21 @@ def rate(quotes: list[dict[str, Any]], start: datetime | None) -> dict[str, Any]
                     "descrizione": f"{share:.0%} del volume su «{outcome}», che non è il favorito",
                 }
             )
+    computable = {
+        "scostamento_bookmaker": any(len(b) >= 3 for b in by_outcome.values()),
+        "movimento_finale": start is not None,
+        "quota_volume": bool(total) and len(volumes) >= 2,
+    }
     score = sum(s["peso"] for s in signals)
-    rating = "alto" if score >= 4 else "medio" if score >= 2 else "basso"
+    if not signals and not any(computable.values()):
+        rating = "non_determinabile"  # nessun segnale calcolabile: non vale "basso"
+    else:
+        rating = "alto" if score >= 4 else "medio" if score >= 2 else "basso"
     return {
         "rating": rating,
         "punteggio": score,
         "segnali": signals,
+        "calcolabili": computable,
         "bookmaker": sorted({q["bookmaker"] for q in quotes}),
         "esiti": sorted(by_outcome),
         "quote": len(quotes),

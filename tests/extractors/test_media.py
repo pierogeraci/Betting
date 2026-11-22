@@ -22,3 +22,22 @@ def test_dedupe_removes_near_duplicates():
     ]
     kept = dedupe(frames)
     assert [f.time_ms for f in kept] == [0, 1000]
+
+
+def test_playlists_are_rejected():
+    from extractors.media import is_playlist, process
+
+    assert is_playlist(b"#EXTM3U\n#EXT-X-VERSION:3\nfile:///proc/self/environ")
+    assert is_playlist(b"ffconcat version 1.0\nfile /etc/passwd")
+    assert not is_playlist(b"\x00\x00\x00\x18ftypmp42")
+    result = process(b"#EXTM3U\nhttp://example.com/x.ts", "video")
+    assert result.items == [] and "playlist" in result.errors[0]
+
+
+def test_ffmpeg_only_reads_local_files():
+    import inspect
+
+    from extractors import media
+
+    source = inspect.getsource(media)
+    assert source.count("-protocol_whitelist") == 3

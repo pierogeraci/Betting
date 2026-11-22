@@ -40,6 +40,10 @@ def _test_url() -> str:
 
 os.environ["DATABASE_URL"] = _test_url()
 os.environ.setdefault("S3_BUCKET", "prova-grezzi")
+# Nessun download di modelli e nessun servizio esterno durante i test.
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["MODELLI_SOLO_LOCALI"] = "1"
+os.environ["OLLAMA_URL"] = ""
 os.environ.setdefault("S3_BUCKET_ARRIVO", "prova-arrivo")
 
 

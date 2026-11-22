@@ -207,14 +207,27 @@ def structured(text: str) -> dict[str, Any]:
         "riferimenti_italia": italy,
         "codici_promo": [e.value for e in entities if e.kind == "codice_promo"][:5],
         "portafogli": [e.value for e in entities if e.kind.startswith("portafoglio_")][:5],
-        "canali": [e.value for e in entities if e.kind == "canale_telegram"][:10],
+        "canali": sum(
+            1 for e in entities if e.kind == "canale_telegram"
+        ),  # solo il numero: possono essere persone
     }
+
+
+CHANNEL_LINK = re.compile(
+    r"(?i)\b((?:https?://)?(?:t\.me|telegram\.me|telegram\.dog)/(?:s/)?)\+?[A-Za-z0-9_]{4,64}"
+)
+
+
+def mask_channels(text: str) -> str:
+    """I nomi dopo t.me/ possono essere account di persone: nel testo conservato diventano un segnaposto."""
+    return CHANNEL_LINK.sub(r"\1[canale]", text or "")
 
 
 def analyse(
     text: str, platform: str | None = None, emoji_dictionary: dict[tuple[str, str], str] | None = None
 ) -> dict[str, Any]:
-    clean = normalize_text(text, platform)
+    raw_clean = normalize_text(text, platform)
+    clean = mask_channels(raw_clean)
     return {
         "versione": VERSION,
         "testo_normalizzato": clean[:5000],
@@ -223,8 +236,11 @@ def analyse(
         "sentiment": sentiment(text),
         "riassunto": summary(clean),
         "parole_chiave": key_phrases(clean),
-        "campi": structured(text),
-        "entita": [{"tipo": e.kind, "valore": e.value, "certezza": e.certainty} for e in extract(clean)][
-            :100
-        ],
+        "campi": structured(text)
+        | {"canali": sum(1 for e in extract(raw_clean) if e.kind == "canale_telegram")},
+        "entita": [
+            {"tipo": e.kind, "valore": e.value, "certezza": e.certainty}
+            for e in extract(clean)
+            if e.kind != "canale_telegram"
+        ][:100],
     }

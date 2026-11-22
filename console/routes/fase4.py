@@ -22,7 +22,6 @@ from core.models import (
     QuotaEvento,
     RegistroVoce,
     Sito,
-    utcnow,
 )
 from core.storage import archive_bytes
 from scoring import anomalies, events
@@ -264,11 +263,13 @@ async def events_upload(
             db.add(event)
             db.flush()
         for q in quotes:
+            if q["momento"] is None:
+                continue  # senza l'ora della quota la riga non si usa: non si inventa una data
             db.add(
                 QuotaEvento(
                     evento_id=event.id,
                     bookmaker=q["bookmaker"],
-                    momento=q["momento"] or utcnow(),
+                    momento=q["momento"],
                     esito=q["esito"],
                     quota=q["quota"],
                     volume=q["volume"],

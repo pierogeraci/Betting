@@ -140,12 +140,13 @@ async def submit_file(
     request: Request,
     file: UploadFile = File(...),
     nota: str = Form(""),
+    provenienza: str = Form("altro"),
     user: Utente = Depends(current_user),
     db: Session = Depends(get_db),
 ):
     data = await read_upload(file, get_settings().max_upload_mb)
     try:
-        result = intake.submit_file(db, file.filename or "file", data, user.id, nota)
+        result = intake.submit_file(db, file.filename or "file", data, user.id, nota, provenienza)
     except ValueError as exc:
         context = {
             "sezione": "nuovo",

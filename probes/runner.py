@@ -85,6 +85,10 @@ PROBES: dict[str, dict[str, JobRunner]] = {
 }
 
 
+# Durata della presa di un lavoro: oltre, il lavoro torna in coda. Più lunga per OCR, trascrizione e APK.
+LEASES = {"estrazione": 3600, "apk": 1800, "apk-dinamica": 1800, "web": 2700, "tor": 2700, "telegram": 1800}
+
+
 def cap_payload(job: CollectJob, cap: int | None) -> None:
     """Applica il tetto della prova reale al lavoro preso, qualunque cosa chieda il carico."""
     if not cap:
@@ -116,7 +120,7 @@ def run(
         if len(recent) >= per_hour:
             time.sleep(5)
             continue
-        job = client.claim(list(runners))
+        job = client.claim(list(runners), lease_seconds=LEASES.get(probe, 300))
         if job is None:
             if limit is not None or idle_exit:
                 break
