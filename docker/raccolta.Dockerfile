@@ -8,6 +8,8 @@ RUN --mount=type=secret,id=ca,required=false \
     if [ -s /run/secrets/ca ]; then export PIP_CERT=/run/secrets/ca; fi; \
     pip install --no-cache-dir --break-system-packages \
         'playwright==1.65.2' 'psycopg[binary]>=3.2' 'boto3>=1.34' 'tldextract>=5.1' 'pyyaml>=6.0' 'dnspython>=2.6' 'telethon>=1.36' 'scrapy>=2.11' 'scrapy-playwright>=0.0.40'
+# adb serve solo all'analisi dinamica degli APK.
+RUN apt-get update && apt-get install -y --no-install-recommends adb && rm -rf /var/lib/apt/lists/*
 COPY core/__init__.py core/config.py core/collect_client.py core/storage.py core/domains.py core/
 COPY collectors/__init__.py collectors/base.py collectors/terms.py collectors/pages.py collectors/
 COPY config/giochi.yaml config/emoji.yaml config/

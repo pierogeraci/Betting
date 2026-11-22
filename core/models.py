@@ -496,3 +496,69 @@ class Modello(Base):
     attivo: Mapped[bool] = mapped_column(Boolean, default=True)
     addestrato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
     addestrato_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+
+
+class RegistroVoce(Base):
+    """Voce di un registro pubblico caricato dall'analista: società o licenze di gioco."""
+
+    __tablename__ = "registro_voce"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    registro: Mapped[str] = mapped_column(String(20), index=True)
+    fonte: Mapped[str] = mapped_column(String(200))
+    nome: Mapped[str] = mapped_column(String(300))
+    nome_normalizzato: Mapped[str] = mapped_column(String(300), index=True)
+    paese: Mapped[str] = mapped_column(String(60), default="")
+    numero: Mapped[str] = mapped_column(String(80), default="", index=True)
+    stato: Mapped[str] = mapped_column(String(60), default="")
+    dettagli: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    elemento_grezzo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("elemento_grezzo.id", ondelete="SET NULL")
+    )
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (CheckConstraint("registro in ('societa','licenze')", name="registro_tipo"),)
+
+
+class LegalEntity(Base):
+    """Associazione di un sito a una società, confermata dall'analista. Solo persone giuridiche."""
+
+    __tablename__ = "legal_entity"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    sito_id: Mapped[int] = mapped_column(ForeignKey("sito.id", ondelete="CASCADE"), index=True)
+    nome: Mapped[str] = mapped_column(String(300))
+    paese: Mapped[str] = mapped_column(String(60), default="")
+    numero: Mapped[str] = mapped_column(String(80), default="")
+    punteggio: Mapped[float] = mapped_column(Numeric(5, 3), default=0)
+    evidenze: Mapped[list[Any]] = mapped_column(default=list)
+    registro_voce_id: Mapped[int | None] = mapped_column(ForeignKey("registro_voce.id", ondelete="SET NULL"))
+    stato: Mapped[str] = mapped_column(String(20), default="confermata")
+    confermata_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+    note: Mapped[str] = mapped_column(Text, default="")
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (CheckConstraint("stato in ('confermata','respinta')", name="legal_entity_stato"),)
+
+
+class EventoSportivo(Base):
+    __tablename__ = "evento_sportivo"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    nome: Mapped[str] = mapped_column(String(300))
+    sport: Mapped[str] = mapped_column(String(60), default="")
+    competizione: Mapped[str] = mapped_column(String(200), default="")
+    inizio: Mapped[datetime | None] = mapped_column(TS)
+    rating: Mapped[str | None] = mapped_column(String(10))
+    dettaglio: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    elemento_grezzo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("elemento_grezzo.id", ondelete="SET NULL")
+    )
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (UniqueConstraint("nome", "inizio", name="evento_unico"),)
+
+
+class QuotaEvento(Base):
+    __tablename__ = "quota_evento"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    evento_id: Mapped[int] = mapped_column(ForeignKey("evento_sportivo.id", ondelete="CASCADE"), index=True)
+    bookmaker: Mapped[str] = mapped_column(String(120))
+    momento: Mapped[datetime] = mapped_column(TS)
+    esito: Mapped[str] = mapped_column(String(40))
+    quota: Mapped[float] = mapped_column(Numeric(10, 3))
+    volume: Mapped[float | None] = mapped_column(Numeric(16, 2))

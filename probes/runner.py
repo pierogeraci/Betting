@@ -60,6 +60,18 @@ def _media(client: CollectClient, job: CollectJob) -> dict[str, Any]:
     return run_job(client, job)
 
 
+def _apk(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from probes.apk.static import run_job
+
+    return run_job(client, job)
+
+
+def _apk_dynamic(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from probes.apk.dynamic import run_job
+
+    return run_job(client, job)
+
+
 # Sonda → tipi di lavoro che esegue.
 PROBES: dict[str, dict[str, JobRunner]] = {
     "snapshot": {"snapshot": _snapshot, "rete": _network},
@@ -68,6 +80,8 @@ PROBES: dict[str, dict[str, JobRunner]] = {
     "web": {"crawl": _crawl},
     "tor": {"crawl": _crawl},
     "estrazione": {"estrai_media": _media},
+    "apk": {"apk": _apk},
+    "apk-dinamica": {"apk_dinamica": _apk_dynamic},
 }
 
 

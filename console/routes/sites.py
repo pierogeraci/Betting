@@ -26,6 +26,8 @@ SCHEDE = (
     "trust",
     "puntate",
     "gemelli",
+    "legal",
+    "grafo",
     "snapshot",
     "traffico",
     "sorgente",
@@ -209,6 +211,10 @@ def site_detail(
     context |= profile.site_context(db, site)
     if scheda == "profilazione":
         context["gruppi"] = profile.grouped_indicators(db, site.id)
+    elif scheda in {"legal", "grafo"}:
+        from console.routes.fase4 import legal_context
+
+        context |= legal_context(db, site)
     elif scheda == "puntate":
         from core.models import Puntata
 

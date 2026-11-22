@@ -1,0 +1,12 @@
+<section class="scheda"><header><h2>Grafo delle entità</h2><span class="aiuto">{{ grafo.nodi|length }} nodi · {{ grafo.archi|length }} legami</span></header>
+  <div class="corpo">
+  {% if grafo.nodi|length > 1 %}
+  <svg class="grafo" viewBox="-8 -4 116 108" role="img" aria-label="Grafo delle entità collegate a {{ sito.dominio }}">
+    {% for a in grafo.archi %}<line class="arco" x1="{{ a.x1|round(2) }}" y1="{{ a.y1|round(2) }}" x2="{{ a.x2|round(2) }}" y2="{{ a.y2|round(2) }}"><title>{{ a.tipo }}</title></line>{% endfor %}
+    {% for n in grafo.nodi %}<g class="nodo {{ n.tipo }}">
+      {% if n.url %}<a href="{{ n.url }}">{% endif %}<circle cx="{{ n.x|round(2) }}" cy="{{ n.y|round(2) }}" r="{{ 3.6 if n.tipo == 'sito' else 2.2 }}"><title>{{ n.tipo }}: {{ n.etichetta }}</title></circle>
+      <text x="{{ n.x|round(2) }}" y="{{ (n.y + (5.6 if n.tipo == 'sito' else 4.2))|round(2) }}">{{ n.etichetta|truncate(26) }}</text>{% if n.url %}</a>{% endif %}</g>{% endfor %}
+  </svg>
+  <div class="legenda">{% for t, nome in [("sito", "Sito"), ("gemello", "Dominio gemello"), ("legal_entity", "Legal entity"), ("fonte", "Fonte"), ("tracciamento", "Tracciamento"), ("societa", "Società dichiarata"), ("licenza", "Licenza"), ("portafoglio_btc", "Portafoglio"), ("dominio_collegato", "Altro dominio con la stessa entità")] %}<span><i class="nodo-legenda {{ t }}"></i>{{ nome }}</span>{% endfor %}</div>
+  {% else %}<div class="vuoto"><h3>Ancora nessun legame</h3><p>I legami nascono dalla profilazione, dalle sonde e dalle legal entity confermate.</p></div>{% endif %}
+  </div></section>

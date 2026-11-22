@@ -1,0 +1,61 @@
+{
+ "package_name": "com.luckymoon.casino",
+ "app_name": "LuckyMoon Casino",
+ "version_name": "2.4.1",
+ "min_sdk": "21",
+ "target_sdk": "33",
+ "sha256": "abababababababababababababababababababababababababababababababab",
+ "permissions": {
+  "android.permission.INTERNET": {
+   "status": "normal"
+  },
+  "android.permission.READ_CONTACTS": {
+   "status": "dangerous"
+  },
+  "android.permission.ACCESS_FINE_LOCATION": {
+   "status": "dangerous"
+  }
+ },
+ "libraries": [
+  "com.google.android.gms.ads",
+  "com.appsflyer",
+  "okhttp3"
+ ],
+ "trackers": {
+  "trackers": [
+   {
+    "name": "AppsFlyer"
+   },
+   {
+    "name": "Google AdMob"
+   }
+  ]
+ },
+ "domains": {
+  "api.luckymoon-casino.com": {},
+  "cdn.luckymoon-casino.com": {},
+  "pay.fastcashier.net": {},
+  "www.googleapis.com": {},
+  "app.appsflyer.com": {}
+ },
+ "urls": [
+  {
+   "urls": [
+    "https://api.luckymoon-casino.com/v1/login"
+   ]
+  }
+ ],
+ "certificate_analysis": {
+  "certificate_info": "X.509 Subject: CN=Moon Gaming, O=Moon Gaming N.V., C=CW\nsha256 Digest: cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+ },
+ "activities": [
+  "a",
+  "b"
+ ],
+ "services": [
+  "s"
+ ],
+ "appsec": {
+  "security_score": 38
+ }
+}

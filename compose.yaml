@@ -185,9 +185,86 @@ services:
     profiles: [modelli]
     restart: unless-stopped
 
+  # Analisi statica degli APK: MobSF su una rete interna senza uscita verso Internet.
+  mobsf:
+    image: ${IMMAGINE_MOBSF:-opensecurity/mobile-security-framework-mobsf:v4.3.0}
+    environment:
+      MOBSF_API_KEY: ${MOBSF_API_KEY:?manca MOBSF_API_KEY in .env}
+    networks: [app]
+    profiles: [app]
+    restart: unless-stopped
+
+  apk:
+    build:
+      context: .
+      dockerfile: docker/raccolta.Dockerfile
+    command: ["python", "-m", "probes.runner", "--sonda", "apk"]
+    environment:
+      RACCOLTA_DATABASE_URL: postgresql://raccolta:${RACCOLTA_DB_PASSWORD:?manca RACCOLTA_DB_PASSWORD in .env}@db:5432/${POSTGRES_DB:-betting}
+      S3_ENDPOINT: http://archivio:8333
+      S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+      S3_BUCKET_LAVORAZIONE: ${S3_BUCKET_LAVORAZIONE:-betting-lavorazione}
+      RACCOLTA_S3_ACCESS_KEY: ${ESTRAZIONE_S3_ACCESS_KEY:?manca ESTRAZIONE_S3_ACCESS_KEY in .env}
+      RACCOLTA_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
+      MOBSF_URL: http://mobsf:8000
+      MOBSF_API_KEY: ${MOBSF_API_KEY:?manca MOBSF_API_KEY in .env}
+    networks: [raccolta, app]
+    read_only: true
+    tmpfs: ["/tmp:size=1g"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    profiles: [app]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  # Analisi dinamica: emulatore Android ufficiale usa e getta e mitmproxy. Richiede KVM.
+  # Si avvia solo su richiesta: make apk-dinamica.
+  emulatore:
+    image: ${IMMAGINE_EMULATORE:-budtmo/docker-android:emulator_14.0}
+    devices: ["/dev/kvm"]
+    environment:
+      EMULATOR_DEVICE: "Samsung Galaxy S10"
+      EMULATOR_ADDITIONAL_ARGS: "-http-proxy http://mitm:8080 -no-snapshot -wipe-data"
+    networks: [app_dinamica]
+    profiles: [apk-dinamica]
+
+  mitm:
+    image: ${IMMAGINE_MITMPROXY:-mitmproxy/mitmproxy:11.0.2}
+    command: ["mitmdump", "--listen-port", "8080", "-s", "/script/mitm_log.py"]
+    environment:
+      FLUSSI_MITM: /flussi/flussi.jsonl
+    volumes:
+      - ./probes/apk/mitm_log.py:/script/mitm_log.py:ro
+      - flussi_mitm:/flussi
+    networks: [app_dinamica, raccolta]
+    profiles: [apk-dinamica]
+
+  apk-dinamica:
+    build:
+      context: .
+      dockerfile: docker/raccolta.Dockerfile
+    command: ["python", "-m", "probes.runner", "--sonda", "apk-dinamica", "--limite", "1"]
+    environment:
+      RACCOLTA_DATABASE_URL: postgresql://raccolta:${RACCOLTA_DB_PASSWORD:?manca RACCOLTA_DB_PASSWORD in .env}@db:5432/${POSTGRES_DB:-betting}
+      S3_ENDPOINT: http://archivio:8333
+      S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+      S3_BUCKET_LAVORAZIONE: ${S3_BUCKET_LAVORAZIONE:-betting-lavorazione}
+      RACCOLTA_S3_ACCESS_KEY: ${ESTRAZIONE_S3_ACCESS_KEY:?manca ESTRAZIONE_S3_ACCESS_KEY in .env}
+      RACCOLTA_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
+      EMULATORE: emulatore:5555
+      FLUSSI_MITM: /flussi/flussi.jsonl
+      DURATA_ANALISI_S: ${DURATA_ANALISI_S:-600}
+    volumes: [flussi_mitm:/flussi:ro]
+    networks: [raccolta, app_dinamica]
+    profiles: [apk-dinamica]
+
 networks:
   interna:
   raccolta:
+  app:
+    internal: true
+  app_dinamica:
 
 volumes:
   dati_db:
@@ -195,3 +272,4 @@ volumes:
   sessione_telegram:
   modelli:
   modelli_ollama:
+  flussi_mitm:

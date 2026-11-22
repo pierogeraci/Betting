@@ -225,3 +225,20 @@ label.riga { display: inline-flex; margin: 0; font-weight: 500; }
 .galleria figure { margin: 0; } .galleria img { width: 100%; border-radius: 6px; border: 1px solid var(--bordo); display: block; }
 .galleria figcaption { font-size: .78rem; color: var(--testo-2); margin-top: 3px; }
 .emoji-grande { font-size: 1.4rem; }
+svg.grafo { width: 100%; height: 560px; display: block; }
+svg.grafo .arco { stroke: var(--bordo-forte); stroke-width: .25; }
+svg.grafo text { font-size: 2.2px; fill: var(--testo-2); text-anchor: middle; }
+svg.grafo circle { fill: var(--testo-3); stroke: var(--superficie); stroke-width: .4; }
+svg.grafo .sito circle { fill: var(--accento); } svg.grafo .sito text { font-size: 2.8px; font-weight: 700; fill: var(--testo); }
+svg.grafo .gemello circle { fill: var(--pericolo); } svg.grafo .legal_entity circle { fill: var(--ok); }
+svg.grafo .fonte circle { fill: var(--info); } svg.grafo .tracciamento circle, svg.grafo .dominio_collegato circle { fill: var(--avviso); }
+.nodo-legenda { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; background: var(--testo-3); }
+.nodo-legenda.sito { background: var(--accento); } .nodo-legenda.gemello { background: var(--pericolo); } .nodo-legenda.legal_entity { background: var(--ok); }
+.nodo-legenda.fonte { background: var(--info); } .nodo-legenda.tracciamento, .nodo-legenda.dominio_collegato { background: var(--avviso); }
+svg.linee { height: 180px; }
+svg.linee .serie { fill: none; stroke-width: 2; }
+svg.linee .finale { fill: var(--avviso-tenue); }
+.s0 { stroke: var(--accento); } .s1 { stroke: var(--pericolo); } .s2 { stroke: var(--ok); } .s3 { stroke: var(--avviso); } .s4 { stroke: var(--testo-3); }
+.serie-legenda { width: 12px; height: 3px; display: inline-block; margin-right: 6px; vertical-align: middle; }
+.serie-legenda.s0 { background: var(--accento); } .serie-legenda.s1 { background: var(--pericolo); } .serie-legenda.s2 { background: var(--ok); } .serie-legenda.s3 { background: var(--avviso); } .serie-legenda.s4 { background: var(--testo-3); }
+ul.dettagli { margin: 4px 0; padding-left: 18px; }

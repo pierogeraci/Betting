@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Eventi sportivi{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Rating degli eventi sportivi</h1><p>Rischio di frode su un evento, dalle serie di quote e volumi caricate (fornitore di dati o autorità): bookmaker con quote fuori dal consenso, movimenti bruschi nelle ultime ore, volumi anomali.</p></div></div>
+<div class="griglia c21">
+<section class="scheda"><header><h2>Eventi</h2></header>
+  {% if righe %}<div class="tabella-contenitore"><table><thead><tr><th>Evento</th><th>Inizio</th><th>Rating</th><th>Segnali</th></tr></thead><tbody>
+  {% for e in righe %}<tr><td><a href="/eventi/{{ e.id }}"><strong>{{ e.nome }}</strong></a><span class="secondario">{{ e.competizione }}</span></td><td>{{ e.inizio|quando }}</td>
+    <td><span class="etichetta-stato {{ {'alto': 'danger', 'medio': 'warn', 'basso': 'ok'}.get(e.rating, 'neutral') }}">{{ e.rating or "—" }}</span></td><td>{{ e.dettaglio.segnali|length if e.dettaglio else 0 }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><h3>Nessun evento</h3><p>Carica una serie di quote.</p></div>{% endif %}</section>
+<section class="scheda"><header><h2>Carica quote</h2></header>
+  <form class="corpo" method="post" action="/eventi" enctype="multipart/form-data">{{ csrf_campo(csrf) }}
+    <div class="campo"><div class="caricamento"><strong id="file-q">File CSV</strong>evento, inizio, bookmaker, momento, esito, quota, volume
+      <input type="file" name="file" accept=".csv,text/csv" required data-file="#file-q" aria-label="File delle quote"></div></div>
+    <div class="campo"><label for="fq">Fonte</label><input id="fq" name="fonte" type="text" placeholder="Fornitore, data dell'estrazione"></div>
+    <button class="bottone primario" type="submit">Carica e calcola</button></form></section>
+</div>
+{% endblock %}

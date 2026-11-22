@@ -14,7 +14,17 @@ from console.deps import csrf_protect, current_user, get_db, open_reviews, redir
 from console.routes.pages import read_upload
 from core import profiling, queue
 from core.bets import parse_upload
-from core.models import ElementoGrezzo, Puntata, Punteggio, Revisione, Sito, Snapshot, Utente, utcnow
+from core.models import (
+    ElementoGrezzo,
+    LegalEntity,
+    Puntata,
+    Punteggio,
+    Revisione,
+    Sito,
+    Snapshot,
+    Utente,
+    utcnow,
+)
 from core.storage import archive_bytes
 from scoring.config import load_rules
 
@@ -318,6 +328,11 @@ def report(
         "gruppi": grouped_indicators(db, site.id),
         "puntate": dict((f, c) for c, f in bets),
         "generato_il": utcnow(),
+        "legal_confermate": db.execute(
+            select(LegalEntity).where(LegalEntity.sito_id == site.id, LegalEntity.stato == "confermata")
+        )
+        .scalars()
+        .all(),
         "autore": user,
     }
     response = templates.TemplateResponse(request, "report.html", context)

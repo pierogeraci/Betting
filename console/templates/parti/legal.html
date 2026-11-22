@@ -1,0 +1,25 @@
+{% from "parti/macro.html" import csrf_campo %}
+<div class="messaggio info">Il sistema propone candidati ordinati per punteggio; l'associazione la decide l'analista. Solo società: nessuna persona fisica.
+  {% if not registri %}Nessun registro pubblico caricato: i candidati vengono solo dai dati del sito. <a href="/registri">Carica un registro</a>.{% endif %}</div>
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Candidati</h2></header>
+  {% if candidati %}<div class="corpo pila">{% for c in candidati %}
+    <div class="evidenza"><div class="riga tra"><strong>{{ c.nome }}</strong><span class="etichetta-stato {{ 'ok' if c.punteggio >= 0.7 else 'warn' if c.punteggio >= 0.4 else 'neutral' }}">{{ "%.0f"|format(c.punteggio * 100) }}%</span></div>
+      <p class="dettagli">{% if c.paese %}{{ c.paese }}{% endif %}{% if c.numero %} · n. {{ c.numero }}{% endif %}</p>
+      <ul class="dettagli">{% for ev in c.evidenze %}<li>{{ ev.evidenza }}</li>{% endfor %}</ul>
+      <form class="riga" method="post" action="/siti/{{ sito.id }}/legal">{{ csrf_campo(csrf) }}<input type="hidden" name="nome" value="{{ c.nome }}">
+        <input type="text" name="note" placeholder="Nota (facoltativa)" aria-label="Nota">
+        <button class="bottone piccolo primario" type="submit" name="decisione" value="conferma">Conferma</button>
+        <button class="bottone piccolo" type="submit" name="decisione" value="respingi">Respingi</button></form></div>{% endfor %}</div>
+  {% else %}<div class="vuoto"><h3>Nessun candidato</h3><p>Il sito non dichiara una società e nessun gemello ha una legal entity confermata.</p></div>{% endif %}</section>
+  <div class="pila">
+    <section class="scheda"><header><h2>Decisioni</h2></header>
+      {% if legal_confermate %}<div class="corpo stretto tabella-contenitore"><table><tbody>{% for le in legal_confermate %}<tr><td><strong>{{ le.nome }}</strong><span class="secondario">{{ le.note }}</span></td><td>{{ "Confermata" if le.stato == "confermata" else "Respinta" }}</td><td>{{ le.creato_il|quando("%d/%m/%Y") }}</td></tr>{% endfor %}</tbody></table></div>
+      {% else %}<div class="vuoto"><p>Nessuna decisione ancora.</p></div>{% endif %}</section>
+    <section class="scheda"><header><h2>Indica una società</h2></header>
+      <form class="corpo pila" method="post" action="/siti/{{ sito.id }}/legal">{{ csrf_campo(csrf) }}<input type="hidden" name="decisione" value="aggiungi">
+        <input type="text" name="nome" placeholder="Ragione sociale" aria-label="Ragione sociale" required>
+        <input type="text" name="note" placeholder="Da dove viene (fonte, documento)" aria-label="Fonte" required>
+        <button class="bottone" type="submit">Conferma a mano</button></form></section>
+  </div>
+</div>

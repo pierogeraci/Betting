@@ -37,6 +37,9 @@ table{width:100%;border-collapse:collapse;margin:6px 0 12px;font-size:13px}th,td
 <span class="nota">certezza {{ "%.0f"|format(i.certezza*100) }}% · {{ i.collettore }} v{{ i.versione_collettore }}{% if i.evidenza.snapshot_id %} · snapshot {{ i.evidenza.snapshot_id }}{% endif %}</span></td></tr>{% endfor %}
 </table>{% endfor %}
 
+{% if legal_confermate %}<h2>Legal entity</h2><table><tr><th>Società</th><th>Paese</th><th>Evidenze</th></tr>
+{% for le in legal_confermate %}<tr><td>{{ le.nome }}</td><td>{{ le.paese }}</td><td>{% for ev in le.evidenze %}{{ ev.evidenza }}<br>{% endfor %}<span class="nota">confermata dall'analista il {{ le.creato_il.strftime("%Y-%m-%d") }}</span></td></tr>{% endfor %}</table>{% endif %}
+
 {% if gemelli %}<h2>Domini gemelli</h2><table><tr><th>Dominio</th><th>Segnali in comune</th></tr>
 {% for g in gemelli %}<tr><td>{{ g.sito.dominio }}</td><td>{% for m in g.motivi %}{{ m.motivo }}: <span class="mono">{{ m.valore }}</span><br>{% endfor %}</td></tr>{% endfor %}</table>{% endif %}
 

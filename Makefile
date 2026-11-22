@@ -6,7 +6,7 @@ COMPOSE := BUILDX_BAKE_ENTITLEMENTS_FS=0 docker compose -f compose.yaml $(COMPOS
 LIMITE ?=
 SONDA ?=
 
-.PHONY: help setup env up up-raccolta down init test lint collect test-integration create-user telegram-login eval
+.PHONY: help setup env up up-raccolta up-app apk-dinamica anomalie down init test lint collect test-integration create-user telegram-login eval
 
 help:
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*## "}{printf "  %-18s %s\n", $$1, $$2}'
@@ -52,6 +52,17 @@ test-integration: ## Prova su dati reali: URL in PROVA_URLS (al massimo tre) →
 	$(COMPOSE) run --rm init python -m tests.integration.prepara
 	$(COMPOSE) --profile raccolta run --rm raccolta python -m probes.runner --sonda snapshot --limite 3
 	$(COMPOSE) run --rm init python -m pytest -m integration tests/integration -q
+
+up-app: ## Avvia l'analisi statica degli APK (MobSF su rete interna senza Internet)
+	$(COMPOSE) --profile app up -d --build mobsf apk
+
+apk-dinamica: ## Una analisi dinamica di APK in coda: emulatore usa e getta + mitmproxy (serve KVM)
+	$(COMPOSE) --profile apk-dinamica up -d emulatore mitm
+	$(COMPOSE) --profile apk-dinamica run --rm apk-dinamica
+	$(COMPOSE) --profile apk-dinamica rm -sfv emulatore mitm
+
+anomalie: ## Anomalie sui conti, solo dati sintetici, da terminale
+	$(PY) -c "from scoring.anomalies import run; import json; print(json.dumps(run()['valutazione'], indent=1))"
 
 create-user: ## Crea un account del portale: make create-user UTENTE=nome RUOLO=amministratore
 	@test -n "$(UTENTE)" || { echo "Indica UTENTE=<nome>"; exit 1; }

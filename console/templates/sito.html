@@ -38,7 +38,7 @@
 {% include "parti/avanzamento.html" %}
 
 <nav class="linguette" aria-label="Schede del sito">
-  {% for chiave, nome in [("panoramica", "Panoramica"), ("profilazione", "Profilazione"), ("trust", "Trust Index"), ("puntate", "Puntate"), ("gemelli", "Gemelli" ~ (" · " ~ gemelli|length if gemelli else "")), ("snapshot", "Snapshot"), ("traffico", "Traffico"), ("sorgente", "Sorgente"), ("origine", "Origine"), ("lavori", "Lavori")] %}
+  {% for chiave, nome in [("panoramica", "Panoramica"), ("profilazione", "Profilazione"), ("trust", "Trust Index"), ("puntate", "Puntate"), ("gemelli", "Gemelli" ~ (" · " ~ gemelli|length if gemelli else "")), ("legal", "Legal entity"), ("grafo", "Grafo"), ("snapshot", "Snapshot"), ("traffico", "Traffico"), ("sorgente", "Sorgente"), ("origine", "Origine"), ("lavori", "Lavori")] %}
   <a class="linguetta" href="/siti/{{ sito.id }}?scheda={{ chiave }}{% if snap %}&snapshot={{ snap.id }}{% endif %}"{% if scheda == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>
   {% endfor %}
 </nav>
@@ -79,6 +79,8 @@
 {% elif scheda == "trust" %}{% include "parti/trust.html" %}
 {% elif scheda == "puntate" %}{% include "parti/puntate.html" %}
 {% elif scheda == "gemelli" %}{% include "parti/gemelli.html" %}
+{% elif scheda == "legal" %}{% include "parti/legal.html" %}
+{% elif scheda == "grafo" %}{% include "parti/grafo.html" %}
 {% elif scheda == "snapshot" %}
 {% if snap %}
 <div class="griglia c21">

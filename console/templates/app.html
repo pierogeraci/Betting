@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}App Android{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>App Android</h1><p>Gli APK caricati da <a href="/nuovo">Nuovo elemento</a> si analizzano nel contenitore isolato delle app: statica con MobSF, dinamica nell'emulatore ufficiale usa e getta con il traffico registrato da mitmproxy. Mai eseguiti fuori da lì.</p></div></div>
+{% for m in righe %}{% set a = analisi.get(m.id, {}) %}{% set s = a.apk.metadati if a.apk else None %}
+<section class="scheda"><header><div><h2>{{ s.nome_app if s and s.nome_app else m.nome_file }}</h2><span class="aiuto mono">{{ s.pacchetto if s else m.sha256|breve(16) }}</span></div>
+  {% if utente.ruolo == "amministratore" %}<div class="riga">
+    <form method="post" action="/app/{{ m.id }}/statica">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit">Analisi statica</button></form>
+    <form method="post" action="/app/{{ m.id }}/dinamica">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit"{% if not s %} disabled{% endif %}>Analisi dinamica</button></form></div>{% endif %}</header>
+  <div class="corpo">
+  {% if s %}<div class="griglia c2"><dl class="fatti">
+      <dt>Versione</dt><dd>{{ s.versione }} · SDK {{ s.sdk_minimo }}–{{ s.sdk_target }}</dd>
+      <dt>Permessi pericolosi</dt><dd>{{ s.permessi_pericolosi|join(", ") or "nessuno" }}</dd>
+      <dt>Librerie pubblicitarie</dt><dd>{{ s.librerie_pubblicitarie|join(", ") or "nessuna" }}</dd>
+      <dt>Tracker</dt><dd>{{ s.tracker|join(", ") or "nessuno" }}</dd>
+      <dt>Certificato</dt><dd class="mono">{{ s.certificato.soggetto or "—" }}<br>{{ s.certificato.sha256 or "" }}</dd>
+      <dt>Punteggio MobSF</dt><dd>{{ s.punteggio_sicurezza if s.punteggio_sicurezza is not none else "—" }}</dd></dl>
+    <div><h3>Domini nel codice</h3><div class="pastiglie">{% for d in s.domini_candidati %}<span class="pastiglia">{{ d }}</span>{% endfor %}</div>
+      <p class="aiuto">I domini che non sono librerie note entrano nella lista URL, entro un tetto di 15 per app.</p>
+      {% if a.apk_traffico %}<h3>Traffico osservato nell'emulatore</h3><div class="pastiglie">{% for d in a.apk_traffico.metadati.traffico.domini[:20] %}<span class="pastiglia">{{ d.host }} · {{ d.richieste }}</span>{% endfor %}</div>{% endif %}</div></div>
+  {% elif a.apk_errore %}<div class="messaggio errore">{{ a.apk_errore.testo }}</div>
+  {% else %}<p class="aiuto">Analisi non ancora disponibile.</p>{% endif %}
+  </div></section>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Nessun APK caricato</h3><p>Carica un file .apk da Nuovo elemento: l'analisi statica parte da sola.</p><a class="bottone primario" href="/nuovo">Carica un APK</a></div></div>{% endfor %}
+{% endblock %}

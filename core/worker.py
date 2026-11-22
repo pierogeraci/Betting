@@ -111,6 +111,13 @@ def _eval_entities(session: Session, job: Lavoro) -> dict[str, Any]:
     return evaluate_entities(session)
 
 
+@handler("acquisisci_apk")
+def _ingest_apk(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.apk import ingest_apk
+
+    return ingest_apk(session, _origin(session, job))
+
+
 @handler("profila")
 def _profile(session: Session, job: Lavoro) -> dict[str, Any]:
     from core import profiling
