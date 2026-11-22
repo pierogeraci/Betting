@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import paginazione %}
+{% block titolo %}Ricerca nei contenuti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Ricerca nei contenuti</h1><p>Testo dei messaggi e delle pagine, testo nei fotogrammi, trascrizioni, codici QR e loghi. Per i video il risultato porta il momento del fotogramma.</p></div></div>
+<section class="scheda"><form class="filtri" method="get" action="/ricerca-contenuti">
+  <input type="search" name="q" value="{{ q }}" placeholder="per esempio: bonus 200 oppure &quot;nessun documento&quot;" aria-label="Testo da cercare" required>
+  <select name="tipo" aria-label="Tipo di contenuto"><option value="">Tutti i contenuti</option>{% for t, n in [("testo", "Testo"), ("ocr", "OCR"), ("trascrizione", "Trascrizioni"), ("qr", "Codici QR"), ("logo", "Loghi")] %}<option value="{{ t }}"{% if tipo == t %} selected{% endif %}>{{ n }}</option>{% endfor %}</select>
+  <button class="bottone" type="submit">Cerca</button></form>
+{% if q and risultati %}<div class="tabella-contenitore"><table><thead><tr><th>Elemento</th><th>Dove</th><th>Estratto</th></tr></thead><tbody>
+{% for r in risultati %}<tr><td><a href="/archivio/{{ r.elemento.id }}">{{ r.elemento.fonte }} n. {{ r.elemento.id }}</a><span class="secondario">{{ r.elemento.raccolto_il|quando }}</span></td>
+  <td>{{ r.tipo }}{% if r.tempo_ms is not none %} · <span class="mono">{{ "%d:%02d"|format(r.tempo_ms // 60000, (r.tempo_ms // 1000) % 60) }}</span>{% endif %}</td><td><span class="taglia">{{ r.estratto }}</span></td></tr>{% endfor %}
+</tbody></table></div>{{ paginazione(pag, "/ricerca-contenuti?q=" ~ (q|urlencode) ~ "&tipo=" ~ tipo ~ "&") }}
+{% elif q %}<div class="vuoto"><h3>Nessun risultato</h3><p>Prova con meno parole o con un'altra forma.</p></div>{% endif %}
+</section>
+{% endblock %}

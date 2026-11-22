@@ -48,6 +48,9 @@ MGA_RE = re.compile(r"(?i)\b(MGA/(?:B2C|B2B|CRP)/\d+/\d{4})\b")
 UKGC_RE = re.compile(r"(?i)(?:gambling commission|ukgc)[^\d]{0,40}(\d{4,6})\b")
 
 
+TELEGRAM_HOSTS = {"t.me", "telegram.me", "telegram.dog"}
+
+
 def iban_valid(raw: str) -> bool:
     iban = raw.replace(" ", "").upper()
     if not 15 <= len(iban) <= 34:
@@ -103,7 +106,7 @@ def extract(text: str) -> list[Entity]:
         if any(a <= m.start() < b for a, b in url_spans):
             continue
         host = find_domain(m.group(1))
-        if host:
+        if host and host not in TELEGRAM_HOSTS:
             try:
                 add("dominio", normalize_url(host).registrable, m, 0.8)
             except InvalidUrl:

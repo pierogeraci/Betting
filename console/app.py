@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from console import deps
-from console.routes import adm, admin, auth, pages, probes, profile, sites
+from console.routes import adm, admin, auth, content, pages, probes, profile, sites
 
 BASE = Path(__file__).resolve().parent
 CSP = (
@@ -20,7 +20,7 @@ CSP = (
 
 app = FastAPI(title="Betting – portale analista", docs_url=None, redoc_url=None, openapi_url=None)
 app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")
-for module in (auth, pages, sites, profile, probes, adm, admin):
+for module in (auth, pages, sites, profile, probes, content, adm, admin):
     app.include_router(module.router)
 
 

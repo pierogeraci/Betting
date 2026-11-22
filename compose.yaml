@@ -149,6 +149,42 @@ services:
       init: {condition: service_completed_successfully}
     restart: unless-stopped
 
+  # Estrazione multimediale (OCR, trascrizione): legge dal secchio di lavorazione, scrive in quello di arrivo.
+  estrazione:
+    build:
+      context: .
+      dockerfile: docker/estrazione.Dockerfile
+      args:
+        IMMAGINE_PYTHON: ${IMMAGINE_PYTHON:-python:3.12-slim}
+    environment:
+      RACCOLTA_DATABASE_URL: postgresql://raccolta:${RACCOLTA_DB_PASSWORD:?manca RACCOLTA_DB_PASSWORD in .env}@db:5432/${POSTGRES_DB:-betting}
+      S3_ENDPOINT: http://archivio:8333
+      S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+      S3_BUCKET_LAVORAZIONE: ${S3_BUCKET_LAVORAZIONE:-betting-lavorazione}
+      RACCOLTA_S3_ACCESS_KEY: ${ESTRAZIONE_S3_ACCESS_KEY:?manca ESTRAZIONE_S3_ACCESS_KEY in .env}
+      RACCOLTA_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
+      MODELLO_TRASCRIZIONE: ${MODELLO_TRASCRIZIONE:-large-v3}
+    volumes: [modelli:/modelli]
+    networks: [raccolta]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=2g"]
+    mem_limit: 8g
+    pids_limit: 512
+    profiles: [raccolta]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  # Modello linguistico locale per l'estrazione strutturata (facoltativo). Sulla rete interna:
+  # lavora solo su testo già estratto, i dati non escono dalla macchina.
+  ollama:
+    image: ${IMMAGINE_OLLAMA:-ollama/ollama:0.5.7}
+    volumes: [modelli_ollama:/root/.ollama]
+    networks: [interna]
+    profiles: [modelli]
+    restart: unless-stopped
+
 networks:
   interna:
   raccolta:
@@ -157,3 +193,5 @@ volumes:
   dati_db:
   dati_archivio:
   sessione_telegram:
+  modelli:
+  modelli_ollama:

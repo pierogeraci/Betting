@@ -72,6 +72,45 @@ def _ingest_crawl(session: Session, job: Lavoro) -> dict[str, Any]:
     return ingest_crawl(session, _origin(session, job))
 
 
+@handler("acquisisci_estrazione")
+def _ingest_extraction(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.media_jobs import ingest_extraction
+
+    return ingest_extraction(session, _origin(session, job))
+
+
+@handler("analizza_testo")
+def _analyse(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.analysis import analyse_element
+    from core.models import ElementoGrezzo
+
+    element = session.get(ElementoGrezzo, job.carico.get("elemento_id"))
+    if element is None:
+        return {"saltato": "elemento non trovato"}
+    return analyse_element(session, element)
+
+
+@handler("addestra_classificatore")
+def _train(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.analysis import train_classifier
+
+    return train_classifier(session, job.creato_da)
+
+
+@handler("argomenti")
+def _topics(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.analysis import compute_topics
+
+    return compute_topics(session)
+
+
+@handler("valuta_entita")
+def _eval_entities(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.analysis import evaluate_entities
+
+    return evaluate_entities(session)
+
+
 @handler("profila")
 def _profile(session: Session, job: Lavoro) -> dict[str, Any]:
     from core import profiling

@@ -22,7 +22,7 @@ up: ## Avvia database, archivio, portale e lavoratore (nessuna raccolta)
 
 up-raccolta: ## Solo in esercizio: avvia i contenitori di raccolta continua (snapshot, Telegram, Tor)
 	@echo "Avvio delle raccolte continue su dati reali, con i tetti configurati in .env e nelle sonde."
-	$(COMPOSE) --profile raccolta up -d --build raccolta telegram tor
+	$(COMPOSE) --profile raccolta up -d --build raccolta telegram tor estrazione
 
 down: ## Ferma tutto (i dati restano nei volumi)
 	$(COMPOSE) down
@@ -60,5 +60,8 @@ create-user: ## Crea un account del portale: make create-user UTENTE=nome RUOLO=
 telegram-login: ## Primo accesso dell'account Telegram dedicato: lo esegue l'utente (serve il codice sul telefono)
 	$(COMPOSE) --profile raccolta run --rm -it telegram python -m probes.telegram.login
 
-eval: ## Valutazione sul set etichettato (Fase 3)
-	@echo "La valutazione arriva con la Fase 3." && exit 1
+eval: ## Valutazione sul set etichettato: entità e classificatore (AMBITO=entita|classificatore|gold)
+	$(COMPOSE) run --rm init python -m core.evaluation $(if $(AMBITO),--ambito $(AMBITO),)
+
+eval-gold: ## Valutazione locale sul set di esempi del repository, senza database
+	$(PY) -m core.evaluation --ambito gold

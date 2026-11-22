@@ -26,6 +26,10 @@
     {% for chiave, url, nome in [("sonde", "/sonde", "Sonde"), ("canali", "/canali", "Canali Telegram"), ("parole", "/parole", "Parole chiave")] %}
     <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>
     {% endfor %}
+    <div class="gruppo-voci">Analisi</div>
+    {% for chiave, url, nome in [("ricerca", "/ricerca-contenuti", "Ricerca nei contenuti"), ("etichettatura", "/etichettatura", "Etichettatura"), ("argomenti", "/argomenti", "Argomenti"), ("emoji", "/emoji", "Emoji"), ("valutazione", "/valutazione", "Valutazione")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>
+    {% endfor %}
     <div class="gruppo-voci">Dati</div>
     {% for chiave, url, nome in [("validazione", "/validazione", "Validazione"), ("adm", "/adm", "Elenchi ADM"), ("archivio", "/archivio", "Archivio grezzo"), ("lavori", "/lavori", "Lavori")] %}
     <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>

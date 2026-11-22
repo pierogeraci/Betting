@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Argomenti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Argomenti</h1><p>Modellazione degli argomenti (LDA) sui testi raccolti: non supervisionata, nessun addestramento su etichette.</p></div>
+  <form method="post" action="/argomenti">{{ csrf_campo(csrf) }}<button class="bottone primario" type="submit">Ricalcola</button></form></div>
+{% if modello and modello.metriche.argomenti %}
+<p class="aiuto">{{ modello.metriche.documenti }} documenti · calcolato il {{ modello.addestrato_il|quando }} · {{ modello.versione }}</p>
+<div class="griglia c3">{% for t in modello.metriche.argomenti %}
+  <section class="scheda"><header><h2>Argomento {{ t.argomento }}</h2><span class="aiuto">peso {{ "%.0f"|format(t.peso * 100) }}%</span></header>
+    <div class="corpo pila"><div class="pastiglie">{% for w in t.parole %}<span class="pastiglia">{{ w }}</span>{% endfor %}</div>
+      {% for ex in t.esempi %}<a class="secondario taglia" href="/archivio/{{ ex.id }}">{{ ex.riferimento }}</a>{% endfor %}</div></section>{% endfor %}</div>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Argomenti non ancora calcolati</h3><p>Servono almeno qualche decina di testi raccolti.</p></div></div>{% endif %}
+{% endblock %}

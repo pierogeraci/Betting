@@ -54,6 +54,12 @@ def _crawl(client: CollectClient, job: CollectJob) -> dict[str, Any]:
     return run_job(client, job)
 
 
+def _media(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from extractors.media import run_job
+
+    return run_job(client, job)
+
+
 # Sonda → tipi di lavoro che esegue.
 PROBES: dict[str, dict[str, JobRunner]] = {
     "snapshot": {"snapshot": _snapshot, "rete": _network},
@@ -61,6 +67,7 @@ PROBES: dict[str, dict[str, JobRunner]] = {
     "telegram": {"telegram": _telegram},
     "web": {"crawl": _crawl},
     "tor": {"crawl": _crawl},
+    "estrazione": {"estrai_media": _media},
 }
 
 

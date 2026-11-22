@@ -221,3 +221,7 @@ svg.grafico .ok { fill: var(--ok); } svg.grafico .info { fill: var(--info); } sv
 .legenda .info { background: var(--info); }
 .testo-lungo { white-space: pre-wrap; }
 label.riga { display: inline-flex; margin: 0; font-weight: 500; }
+.galleria { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.galleria figure { margin: 0; } .galleria img { width: 100%; border-radius: 6px; border: 1px solid var(--bordo); display: block; }
+.galleria figcaption { font-size: .78rem; color: var(--testo-2); margin-top: 3px; }
+.emoji-grande { font-size: 1.4rem; }

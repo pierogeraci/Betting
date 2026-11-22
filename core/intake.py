@@ -180,4 +180,12 @@ def submit_file(
     )
     session.add(media)
     session.flush()
+    from core.media_jobs import request_extraction
+
+    if media.tipo in {"immagine", "video", "audio"}:
+        request_extraction(session, media, user_id=user_id)
+    elif media.tipo == "apk":
+        from core.apk import request_apk_analysis
+
+        request_apk_analysis(session, media, user_id=user_id)
     return FileSubmission(element=element, media=media, already_known=False)

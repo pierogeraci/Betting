@@ -358,10 +358,23 @@ def archive_detail(
             ).scalar_one_or_none()
         except InvalidUrl:
             site = None
+    from console.routes.content import extractions
+    from core.models import Etichetta
+
+    label = db.execute(
+        select(Etichetta).where(Etichetta.elemento_grezzo_id == element.id)
+    ).scalar_one_or_none()
     return render(
         request,
         "elemento.html",
-        {"sezione": "archivio", "revisioni": open_reviews(db), "e": element, "sito": site},
+        {
+            "sezione": "archivio",
+            "revisioni": open_reviews(db),
+            "e": element,
+            "sito": site,
+            "estrazioni": extractions(db, element.id),
+            "etichetta": label,
+        },
     )
 
 

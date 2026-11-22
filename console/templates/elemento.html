@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "parti/macro.html" import icona %}
-{% block titolo %}Elemento {{ e.id }}{% endblock %}
+{% block titolo %}Elemento {{ e.id }}{% include "parti/contenuti.html" %}
+{% endblock %}
 {% block contenuto %}
 <div class="testata"><div><h1>Elemento grezzo n. {{ e.id }}</h1><p>{{ e.riferimento }}</p></div>
   <div class="azioni"><a class="bottone" href="/archivio">Torna all'archivio</a>{% if sito %}<a class="bottone primario" href="/siti/{{ sito.id }}">Apri il sito {{ sito.dominio }}</a>{% endif %}</div></div>
@@ -27,4 +28,5 @@
     {% else %}<div class="vuoto"><p>Nessun file collegato.</p></div>{% endif %}
   </section>
 </div>
+{% include "parti/contenuti.html" %}
 {% endblock %}

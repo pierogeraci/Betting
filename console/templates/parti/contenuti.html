@@ -1,0 +1,60 @@
+{% from "parti/macro.html" import csrf_campo, stato %}
+{% set analisi = (estrazioni.get("analisi") or [None])[-1] %}
+<div class="griglia c21">
+<div class="pila">
+  {% if analisi %}{% set a = analisi.metadati %}
+  <section class="scheda"><header><h2>Analisi del testo</h2><span class="aiuto">{{ analisi.modello }} · v{{ analisi.versione_modello }} · {{ analisi.creato_il|quando }}</span></header>
+    <div class="corpo pila">
+      <div class="riga">
+        {% if a.classificazione %}<span class="etichetta-stato {{ 'danger' if a.classificazione.pubblicita_gioco else 'neutral' }}">{{ "Pubblicità di gioco" if a.classificazione.pubblicita_gioco else "Non di gioco" }} · {{ "%.0f"|format(a.classificazione.probabilita * 100) }}%</span>
+        {% else %}<span class="etichetta-stato neutral" title="Addestra il classificatore dalla pagina Valutazione">Classificatore non addestrato</span>{% endif %}
+        <span class="etichetta-stato {{ {'positivo': 'ok', 'negativo': 'danger'}.get(a.sentiment.etichetta, 'neutral') }}">Sentiment {{ a.sentiment.etichetta }} · {{ a.sentiment.punteggio }}</span>
+        <span class="etichetta-stato info">Lingua {{ a.lingua }}</span>
+      </div>
+      {% if a.riassunto %}<div><h3>Riassunto</h3><ul>{% for frase in a.riassunto %}<li>{{ frase }}</li>{% endfor %}</ul></div>{% endif %}
+      {% if a.parole_chiave %}<p><strong>Parole chiave:</strong> {{ a.parole_chiave|join(", ") }}</p>{% endif %}
+      <div class="tabella-contenitore"><table><thead><tr><th>Campo</th><th>Valori</th></tr></thead><tbody>
+        {% for campo, nome in [("marchio", "Marchio"), ("domini", "Domini"), ("giochi", "Giochi"), ("pagamenti", "Pagamenti"), ("bonus", "Bonus"), ("riferimenti_italia", "Riferimenti all'Italia"), ("codici_promo", "Codici promo"), ("portafogli", "Portafogli"), ("canali", "Canali")] %}
+        {% if a.campi[campo] %}<tr><td>{{ nome }}</td><td class="mono">{{ a.campi[campo]|join(", ") }}</td></tr>{% endif %}{% endfor %}
+      </tbody></table></div>
+      {% if a.campi_modello %}<div class="evidenza"><strong>Estrazione del modello locale ({{ a.campi_modello.modello }})</strong><blockquote>{{ a.campi_modello.estratto }}</blockquote>
+        <p class="dettagli">{% for k in ["marchio", "giochi", "pagamenti", "bonus"] if a.campi_modello[k] %}{{ k }}: {{ a.campi_modello[k]|join(", ") }} · {% endfor %}</p></div>{% endif %}
+      {% if a.emoji %}<div><h3>Emoji</h3><div class="pastiglie">{% for em in a.emoji %}<span class="pastiglia" title="{{ em.nome }}">{{ em.emoji }} {{ em.significato or em.nome }}{% if em.volte > 1 %} ×{{ em.volte }}{% endif %}</span>{% endfor %}</div></div>{% endif %}
+      {% if a.entita %}<div><h3>Entità</h3><div class="tabella-contenitore"><table><tbody>{% for en in a.entita %}<tr><td>{{ en.tipo.replace("_", " ") }}</td><td class="mono">{{ en.valore }}</td></tr>{% endfor %}</tbody></table></div></div>{% endif %}
+    </div></section>
+  {% endif %}
+
+  {% for tipo, nome in [("ocr", "Testo nei fotogrammi (OCR)"), ("trascrizione", "Trascrizione dell'audio"), ("traduzione", "Traduzione in inglese"), ("qr", "Codici QR"), ("logo", "Loghi riconosciuti")] %}
+  {% if estrazioni.get(tipo) %}
+  <section class="scheda"><header><h2>{{ nome }}</h2><span class="aiuto">{{ estrazioni[tipo][0].modello }}</span></header>
+    <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Tempo</th><th>Testo</th></tr></thead><tbody>
+    {% for x in estrazioni[tipo] %}<tr><td class="mono">{% if x.tempo_inizio_ms is not none %}{{ "%d:%02d"|format(x.tempo_inizio_ms // 60000, (x.tempo_inizio_ms // 1000) % 60) }}{% else %}—{% endif %}</td><td class="testo-lungo">{{ x.testo }}</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="corpo"><a class="bottone piccolo" href="/archivio/{{ e.id }}/testo?tipo={{ tipo }}">Scarica il testo</a></div></section>
+  {% endif %}{% endfor %}
+
+  {% for f in estrazioni.get("fotogrammi", []) %}{% if f.metadati.fotogrammi %}
+  <section class="scheda"><header><h2>Fotogrammi ai cambi di scena</h2><span class="aiuto">{{ f.metadati.fotogrammi|length }} mostrati</span></header>
+    <div class="corpo galleria">{% for fr in f.metadati.fotogrammi %}<figure><img src="/fotogramma/{{ e.id }}/{{ fr.sha256 }}" alt="Fotogramma a {{ fr.tempo_ms // 1000 }} secondi" loading="lazy"><figcaption class="mono">{{ "%d:%02d"|format(fr.tempo_ms // 60000, (fr.tempo_ms // 1000) % 60) }}</figcaption></figure>{% endfor %}</div></section>
+  {% endif %}{% if f.metadati.errori %}<div class="messaggio avviso">{{ f.metadati.errori|join("; ") }}</div>{% endif %}{% endfor %}
+</div>
+
+<div class="pila">
+  <section class="scheda"><header><h2>Azioni</h2></header><div class="corpo pila">
+    <form method="post" action="/archivio/{{ e.id }}/analizza">{{ csrf_campo(csrf) }}<button class="bottone" type="submit">{{ "Estrai OCR e trascrizione" if e.media else "Analizza il testo" }}</button></form>
+    <p class="aiuto">I file si elaborano nel contenitore di estrazione, isolato: decodifica con ffmpeg, OCR PP-OCRv5, trascrizione in locale con faster-whisper.</p>
+  </div></section>
+  <section class="scheda"><header><h2>Etichetta</h2>{% if etichetta %}<span class="etichetta-stato ok">Etichettato</span>{% endif %}</header>
+    <form class="corpo" method="post" action="/archivio/{{ e.id }}/etichetta">{{ csrf_campo(csrf) }}
+      <div class="campo"><label for="gioco">È una pubblicità di gioco?</label><select id="gioco" name="gioco">
+        <option value="">Non so</option><option value="si"{% if etichetta and etichetta.pubblicita_gioco %} selected{% endif %}>Sì</option>
+        <option value="no"{% if etichetta and etichetta.pubblicita_gioco == false %} selected{% endif %}>No</option></select></div>
+      <div class="campo"><label for="ent">Entità attese, una per riga</label>
+        <textarea id="ent" name="entita" placeholder="dominio: esempio-bet.com&#10;codice_promo: VIP200">{% if etichetta %}{% for x in etichetta.entita.attese or [] %}{{ x.tipo }}: {{ x.valore }}
+{% endfor %}{% endif %}</textarea><p class="aiuto">Tipi: url, dominio, canale_telegram, codice_promo, iban, portafoglio_btc, portafoglio_eth, portafoglio_trx. Nessun nome di persona.</p></div>
+      <div class="campo"><label for="nt">Note</label><input id="nt" name="note" type="text" value="{{ etichetta.note if etichetta else '' }}"></div>
+      <button class="bottone primario" type="submit">Salva l'etichetta</button>
+      {% if e.fonte == "telegram" %}<p class="aiuto">Elemento Telegram: l'etichetta serve solo a misurare, non entra mai nell'addestramento.</p>{% endif %}
+    </form></section>
+</div>
+</div>

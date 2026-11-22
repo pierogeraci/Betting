@@ -183,7 +183,7 @@ def train_classifier(session: Session, user_id: int | None = None, seed: int = 0
             | {
                 "esempi_addestramento": final.trained_on,
                 "esempi_valutazione": len(test),
-                "telegram_esclusi": final.dropped_telegram,
+                "telegram_esclusi": len(examples) - len(allowed),
                 "motore": final.engine,
             },
         )

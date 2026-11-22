@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Etichettatura{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Etichettatura</h1><p>Il set etichettato misura precisione e richiamo a ogni modifica. Gli elementi Telegram si possono etichettare per misurare, ma non entrano mai nell'addestramento.</p></div></div>
+<div class="griglia c4">{% for f, n in [("web", "Web"), ("tor", "Tor"), ("manuale", "Manuale"), ("telegram", "Telegram (solo misura)")] %}
+  <a class="scheda numero" href="/etichettatura?fonte={{ f }}"><span class="etichetta">{{ n }}</span><span class="valore">{{ conteggi.get(f, 0) }}</span><span class="nota">etichettati</span></a>{% endfor %}</div>
+<div class="pastiglie">{% for f, n in [("", "Tutte le fonti"), ("web", "Web"), ("tor", "Tor"), ("manuale", "Manuale"), ("telegram", "Telegram")] %}<a class="pastiglia" href="/etichettatura?fonte={{ f }}"{% if fonte == f %} aria-current="page"{% endif %}>{{ n }}</a>{% endfor %}</div>
+{% for el in righe %}{% set a = analisi.get(el.id) or {} %}
+<section class="scheda"><header><div><h2>{{ el.fonte }} · {{ el.raccolto_il|quando }}</h2><a class="aiuto mono" href="/archivio/{{ el.id }}">{{ el.riferimento|truncate(80) }}</a></div>
+  {% if a.classificazione %}<span class="etichetta-stato info">Sistema: {{ "gioco" if a.classificazione.pubblicita_gioco else "non gioco" }} {{ "%.0f"|format(a.classificazione.probabilita * 100) }}%</span>{% endif %}</header>
+  <div class="corpo griglia c2">
+    <div class="testo-lungo">{{ (el.contenuto or "(solo file: apri l'elemento per vedere OCR e trascrizione)")|truncate(900) }}</div>
+    <form method="post" action="/archivio/{{ el.id }}/etichetta">{{ csrf_campo(csrf) }}<input type="hidden" name="torna" value="/etichettatura?fonte={{ fonte }}">
+      <div class="riga campo"><label class="riga"><input type="radio" name="gioco" value="si" required> Pubblicità di gioco</label><label class="riga"><input type="radio" name="gioco" value="no"> Non di gioco</label></div>
+      <div class="campo"><textarea name="entita" aria-label="Entità attese" placeholder="Entità attese, una per riga: dominio: esempio-bet.com">{% for en in (a.entita or []) if en.tipo in ("url", "dominio", "codice_promo", "canale_telegram", "iban") or en.tipo.startswith("portafoglio_") %}{{ en.tipo }}: {{ en.valore }}
+{% endfor %}</textarea><p class="aiuto">Precompilato con le entità trovate dal sistema: correggi, togli o aggiungi.</p></div>
+      <button class="bottone primario" type="submit">Salva e passa al prossimo</button></form>
+  </div></section>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Niente da etichettare</h3><p>Tutti gli elementi di questa fonte hanno già un'etichetta.</p></div></div>{% endfor %}
+{% endblock %}
