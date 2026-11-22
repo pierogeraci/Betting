@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from console.deps import Page, admin_user, csrf_protect, current_user, get_db, open_reviews, redirect, render
+from console.routes.probes import growth
 from core import adm, intake, queue
 from core.config import get_settings
 from core.domains import InvalidUrl
@@ -39,6 +40,7 @@ def _dashboard(db: Session) -> dict:
         "esiti": adm_counts,
         "lavori": _job_counts(db),
         "revisioni_aperte": open_reviews(db),
+        "crescita": growth(db),
         "elenchi": [
             {"tipo": k, "etichetta": adm.ETICHETTE[k], "carico": v, "vecchio": adm.is_stale(v)}
             for k, v in loads.items()

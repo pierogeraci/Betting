@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, csrf_campo %}
+{% block titolo %}Canali Telegram{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Canali Telegram</h1><p>I canali citati nei messaggi raccolti arrivano qui da approvare. Solo canali e gruppi pubblici: un link d'invito non è ammesso, e un nome che risulta di una persona viene cancellato.</p></div></div>
+<section class="scheda"><header><h2>Aggiungi un canale</h2></header>
+  <form class="corpo riga" method="post" action="/canali">{{ csrf_campo(csrf) }}
+    <input type="text" name="nome" placeholder="@nomecanale oppure t.me/nomecanale" aria-label="Nome pubblico del canale" required>
+    <button class="bottone primario" type="submit">Aggiungi</button></form></section>
+<section class="scheda">
+  <div class="filtri"><div class="pastiglie">{% for s in stati %}<a class="pastiglia" href="/canali?stato={{ s }}"{% if filtro == s %} aria-current="page"{% endif %}>{{ STATI[s][0] }} · {{ conteggi.get(s, 0) }}</a>{% endfor %}</div></div>
+  {% if righe %}<div class="tabella-contenitore"><table><thead><tr><th>Canale</th><th>Tipo</th><th class="num">Partecipanti</th><th>Origine</th><th>Ultimo controllo</th><th></th></tr></thead><tbody>
+  {% for c in righe %}<tr><td>{% if c.stato != "rifiutato" or not c.identificativo.startswith("rimosso-") %}<strong>@{{ c.identificativo }}</strong>{% else %}<span class="secondario">nome cancellato</span>{% endif %}{% if c.titolo %}<span class="secondario">{{ c.titolo }}</span>{% endif %}</td>
+    <td>{{ c.tipo or "—" }}</td><td class="num">{{ c.partecipanti|migliaia if c.partecipanti else "—" }}</td>
+    <td><span class="taglia secondario">{{ c.motivo }}</span>{% if c.scoperto_da %}<a href="/archivio/{{ c.scoperto_da }}">messaggio</a>{% endif %}</td>
+    <td>{{ c.ultimo_controllo|quando }}{% if c.ultimo_errore %}<span class="secondario">{{ c.ultimo_errore }}</span>{% endif %}</td>
+    <td><div class="riga">
+      {% for azione, nome, cond in [("approva", "Approva", c.stato == "da_approvare"), ("rifiuta", "Rifiuta", c.stato == "da_approvare"), ("pausa", "Pausa", c.stato == "attivo"), ("riattiva", "Riattiva", c.stato in ("in_pausa", "in_errore"))] if cond %}
+      <form method="post" action="/canali/{{ c.id }}/{{ azione }}">{{ csrf_campo(csrf) }}<button class="bottone piccolo{% if azione == 'approva' %} primario{% endif %}" type="submit">{{ nome }}</button></form>{% endfor %}
+    </div></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="vuoto"><h3>Nessun canale in questo stato</h3><p>I canali nuovi arrivano dai link e dagli inoltri trovati nei messaggi già raccolti.</p></div>{% endif %}
+</section>
+{% endblock %}

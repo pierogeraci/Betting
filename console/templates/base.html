@@ -22,6 +22,10 @@
     <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span>
       {% if chiave == "revisioni" and revisioni %}<span class="conta">{{ revisioni }}</span>{% endif %}</a>
     {% endfor %}
+    <div class="gruppo-voci">Raccolta</div>
+    {% for chiave, url, nome in [("sonde", "/sonde", "Sonde"), ("canali", "/canali", "Canali Telegram"), ("parole", "/parole", "Parole chiave")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>
+    {% endfor %}
     <div class="gruppo-voci">Dati</div>
     {% for chiave, url, nome in [("validazione", "/validazione", "Validazione"), ("adm", "/adm", "Elenchi ADM"), ("archivio", "/archivio", "Archivio grezzo"), ("lavori", "/lavori", "Lavori")] %}
     <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>
@@ -43,6 +47,7 @@
         <input type="search" name="q" placeholder="Cerca un dominio…" aria-label="Cerca un dominio" value="{{ q or '' }}">
       </form>
       <span class="spazio"></span>
+      <a class="bottone icona-sola campanella" href="/avvisi" aria-label="Avvisi{% if avvisi_nuovi %}: {{ avvisi_nuovi }} da leggere{% endif %}">{{ icona("avvisi") }}{% if avvisi_nuovi %}<span class="punto-avviso">{{ avvisi_nuovi if avvisi_nuovi < 100 else "99+" }}</span>{% endif %}</a>
       <a class="bottone primario" href="/nuovo">{{ icona("nuovo") }}<span>Nuovo</span></a>
       <button class="bottone icona-sola" type="button" data-azione="tema" aria-label="Cambia tema chiaro o scuro">{{ icona("tema") }}</button>
       <form action="/uscita" method="post">{{ csrf_campo(csrf) }}

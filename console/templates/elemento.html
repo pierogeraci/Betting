@@ -10,8 +10,13 @@
     <dt>Raccolto il</dt><dd>{{ e.raccolto_il.strftime("%Y-%m-%d %H:%M:%S") }} UTC</dd>
     <dt>Inserito da</dt><dd>{{ e.autore.nome_utente if e.autore else "—" }}</dd>
     <dt>sha256</dt><dd class="mono">{{ e.sha256 }}</dd>
-    {% if e.contenuto %}<dt>Contenuto</dt><dd class="mono">{{ e.contenuto }}</dd>{% endif %}
+    {% if e.contenuto %}<dt>Contenuto</dt><dd class="{{ 'mono' if e.tipo == 'url' else '' }} testo-lungo">{{ e.contenuto|truncate(4000) }}</dd>{% endif %}
     {% if e.metadati.nota %}<dt>Nota</dt><dd>{{ e.metadati.nota }}</dd>{% endif %}
+    {% if e.metadati.canale %}<dt>Canale</dt><dd>@{{ e.metadati.canale }}</dd>{% endif %}
+    {% if e.metadati.pubblicato_il %}<dt>Pubblicato il</dt><dd>{{ e.metadati.pubblicato_il }}</dd>{% endif %}
+    {% if e.metadati.link %}<dt>Link nel messaggio</dt><dd class="mono">{{ e.metadati.link|join(", ") }}</dd>{% endif %}
+    {% if e.metadati.titolo %}<dt>Titolo della pagina</dt><dd>{{ e.metadati.titolo }}</dd>{% endif %}
+    {% if e.metadati.parole %}<dt>Parole chiave</dt><dd>{{ e.metadati.parole|join(", ") }}</dd>{% endif %}
   </dl></div></section>
   <section class="scheda"><header><h2>File</h2></header>
     {% if e.media %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Nome</th><th>Tipo</th><th class="num">Dimensione</th><th></th></tr></thead><tbody>

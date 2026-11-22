@@ -214,3 +214,10 @@ svg.ripartizione .fondo { fill: var(--superficie-2); }
 .dettagli a { font-weight: 560; }
 .evidenza table { font-size: .84rem; }
 .evidenza th, .evidenza td { padding: 6px 8px; }
+.campanella { position: relative; }
+.punto-avviso { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--pericolo); color: #fff; font-size: .7rem; font-weight: 700; display: grid; place-items: center; }
+svg.grafico { width: 100%; height: 140px; display: block; background: var(--superficie-2); border-radius: var(--raggio-s); }
+svg.grafico .ok { fill: var(--ok); } svg.grafico .info { fill: var(--info); } svg.grafico .warn { fill: var(--avviso); } svg.grafico .neutral { fill: var(--testo-3); }
+.legenda .info { background: var(--info); }
+.testo-lungo { white-space: pre-wrap; }
+label.riga { display: inline-flex; margin: 0; font-weight: 500; }

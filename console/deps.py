@@ -52,6 +52,11 @@ STATI = {
     "non_determinabile": ("Non determinabile", "warn"),
     "attivo": ("Attivo", "ok"),
     "sostituito": ("Sostituito", "neutral"),
+    "attiva": ("Attiva", "ok"),
+    "in_pausa": ("In pausa", "neutral"),
+    "in_errore": ("In errore", "danger"),
+    "da_approvare": ("Da approvare", "warn"),
+    "rifiutato": ("Rifiutato", "neutral"),
 }
 TIPI_LAVORO = {
     "snapshot": "Snapshot della pagina",
@@ -59,6 +64,19 @@ TIPI_LAVORO = {
     "confronto_adm": "Confronto con gli elenchi ADM",
     "confronto_adm_tutti": "Riconfronto di tutti i siti",
     "scarica_adm": "Scaricamento elenco ADM",
+    "profila": "Profilazione del sito",
+    "punteggio": "Calcolo del Trust Index",
+    "rete": "DNS, registrazione, certificato",
+    "acquisisci_rete": "Acquisizione dei dati di rete",
+    "telegram": "Raccolta Telegram",
+    "acquisisci_telegram": "Acquisizione Telegram",
+    "crawl": "Crawler web/Tor",
+    "acquisisci_crawl": "Acquisizione del crawler",
+    "estrai_media": "OCR e trascrizione",
+    "acquisisci_estrazione": "Acquisizione dell'estrazione",
+    "analizza_testo": "Analisi del testo",
+    "apk": "Analisi APK",
+    "acquisisci_apk": "Acquisizione dell'analisi APK",
     "acquisisci_adm": "Caricamento elenco ADM",
 }
 MOTIVI = {
@@ -152,6 +170,20 @@ def render(
     row: SessioneUtente | None = getattr(request.state, "sessione", None)
     ctx.setdefault("utente", row.utente if row else None)
     ctx.setdefault("csrf", row.csrf if row else "")
+    if row is not None and "avvisi_nuovi" not in ctx:
+        from sqlalchemy.orm import object_session
+
+        from console.routes.probes import unread_alerts
+
+        db = object_session(row)
+        ctx["avvisi_nuovi"] = unread_alerts(db) if db is not None else 0
+    if row is not None and "avvisi_nuovi" not in ctx:
+        from sqlalchemy.orm import object_session
+
+        from console.routes.probes import unread_alerts
+
+        db = object_session(row)
+        ctx["avvisi_nuovi"] = unread_alerts(db) if db is not None else 0
     raw = request.cookies.get(FLASH)
     if raw and "|" in unquote(raw):
         kind, message = unquote(raw).split("|", 1)

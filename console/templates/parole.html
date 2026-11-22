@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Parole chiave{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Parole chiave</h1><p>Il prefiltro delle sonde: decidono quali messaggi scaricano i file, quali domini diventano siti da analizzare e quando avvisare l'analista. Il confronto avviene dopo la normalizzazione (accenti, emoji, caratteri sosia, separatori).</p></div></div>
+<section class="scheda"><header><h2>Nuova parola chiave</h2></header>
+  <form class="corpo riga" method="post" action="/parole">{{ csrf_campo(csrf) }}
+    <input type="text" name="termine" placeholder="per esempio: quote maggiorate" aria-label="Parola chiave" required>
+    <select name="categoria" aria-label="Categoria">{% for c in ["gioco", "promozione", "pagamento", "anonimato", "frode", "titolo"] %}<option>{{ c }}</option>{% endfor %}</select>
+    <select name="lingua" aria-label="Lingua">{% for l in ["it", "en", "es", "de", "ru"] %}<option>{{ l }}</option>{% endfor %}</select>
+    <label class="riga"><input type="checkbox" name="avviso" value="1"> Avvisa</label>
+    <button class="bottone primario" type="submit">Aggiungi</button></form></section>
+<section class="scheda"><div class="tabella-contenitore"><table><thead><tr><th>Termine</th><th>Categoria</th><th>Lingua</th><th>Stato</th><th>Avviso</th><th></th></tr></thead><tbody>
+{% for k in righe %}<tr><td><strong>{{ k.termine }}</strong></td><td>{{ k.categoria }}</td><td>{{ k.lingua }}</td>
+  <td><form method="post" action="/parole/{{ k.id }}/attiva">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit">{{ "Attiva" if not k.attiva else "Disattiva" }}</button></form>{% if not k.attiva %}<span class="secondario">disattivata</span>{% endif %}</td>
+  <td><form method="post" action="/parole/{{ k.id }}/avviso">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit">{{ "Sì" if k.avviso else "No" }}</button></form></td>
+  <td><form method="post" action="/parole/{{ k.id }}/elimina">{{ csrf_campo(csrf) }}<button class="bottone piccolo pericolo" type="submit">Elimina</button></form></td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

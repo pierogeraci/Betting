@@ -5,7 +5,7 @@
 <div class="testata"><div><h1>Archivio grezzo</h1><p>Ogni elemento è conservato come raccolto, con fonte, data in UTC e hash. Lo stesso contenuto non entra due volte.</p></div></div>
 <section class="scheda">
   <div class="filtri"><div class="pastiglie">
-    {% for chiave, nome in [("", "Tutte le fonti"), ("manuale", "Inserimento manuale"), ("adm", "Elenchi ADM")] %}
+    {% for chiave, nome in [("", "Tutte le fonti"), ("manuale", "Inserimento manuale"), ("telegram", "Telegram"), ("web", "Web"), ("tor", "Tor"), ("adm", "Elenchi ADM")] %}
     <a class="pastiglia" href="/archivio?fonte={{ chiave }}"{% if fonte == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>{% endfor %}
   </div></div>
   {% if righe %}

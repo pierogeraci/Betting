@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, csrf_campo, grafico_crescita %}
+{% block titolo %}Sonde{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Sonde</h1><p>Le sonde girano nei contenitori di raccolta, su rete separata, entro i tetti configurati. Solo pagine pubbliche e canali pubblici.</p></div></div>
+<div class="griglia c21">
+  <section class="scheda"><header><h2>La lista URL cresce da sola?</h2><span class="aiuto">Criterio di uscita della Fase 2: due settimane</span></header>
+    <div class="corpo pila">{{ grafico_crescita(crescita) }}
+      <p class="aiuto">{{ crescita.automatici }} siti trovati dalle sonde negli ultimi 14 giorni · {{ crescita.serie_giorni }} giorni consecutivi con almeno un sito nuovo.</p></div></section>
+  <section class="scheda"><header><h2>Telegram</h2>{% if telegram_acceso %}<span class="etichetta-stato ok">Acceso</span>{% else %}<span class="etichetta-stato neutral">Spento</span>{% endif %}</header>
+    <div class="corpo pila"><p class="aiuto">Account dedicato, solo canali e gruppi pubblici, nessun dato su autori e membri. I tempi di attesa chiesti dal servizio sono rispettati. I dati Telegram non addestrano alcun modello.</p>
+      <p><strong>{{ canali_attivi }}</strong> canali attivi · <a href="/canali">gestisci i canali</a></p>
+      <p class="aiuto">Il primo accesso lo fa l'utente con <span class="mono">make telegram-login</span>.</p></div></section>
+</div>
+{% for s in sonde %}
+<section class="scheda"><header><div class="riga"><h2>{{ s.nome|capitalize }}</h2>{{ stato(s.stato) }}<span class="aiuto">{{ conteggi.get(s.id, 0)|migliaia }} elementi raccolti</span></div>
+  {% if utente.ruolo == "amministratore" and s.tipo in ("telegram", "web", "tor") %}<div class="riga">
+    <form method="post" action="/sonde/{{ s.id }}/esegui">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit">Esegui ora</button></form>
+    <form method="post" action="/sonde/{{ s.id }}/stato">{{ csrf_campo(csrf) }}<button class="bottone piccolo{% if s.stato == 'attiva' %} pericolo{% endif %}" type="submit">{{ "Metti in pausa" if s.stato == "attiva" else "Attiva" }}</button></form>
+  </div>{% endif %}</header>
+  <div class="corpo griglia c2">
+    <dl class="fatti">
+      <dt>Tipo</dt><dd>{{ s.tipo }}</dd>
+      <dt>Ultima esecuzione</dt><dd>{{ s.ultima_esecuzione|quando }}</dd>
+      {% if s.disponibile_dal %}<dt>Attesa del servizio</dt><dd>fino alle {{ s.disponibile_dal|quando }}</dd>{% endif %}
+      {% if s.cursore.ultimo_esito %}<dt>Ultimo esito</dt><dd>{{ s.cursore.ultimo_esito.elementi }} elementi · {{ s.cursore.ultimo_esito.siti_nuovi }} siti nuovi · {{ s.cursore.ultimo_esito.avvisi }} avvisi{% if s.cursore.ultimo_esito.siti_oltre_tetto %} · {{ s.cursore.ultimo_esito.siti_oltre_tetto }} oltre il tetto{% endif %}</dd>{% endif %}
+      {% if s.ultimo_errore %}<dt>Ultimo errore</dt><dd class="mono">{{ s.ultimo_errore }}</dd>{% endif %}
+    </dl>
+    {% if utente.ruolo == "amministratore" and s.tipo in ("telegram", "web", "tor") %}
+    <form method="post" action="/sonde/{{ s.id }}/configura">{{ csrf_campo(csrf) }}
+      <div class="griglia c2">
+        <div class="campo"><label for="i{{ s.id }}">Intervallo (minuti)</label><input id="i{{ s.id }}" type="text" inputmode="numeric" name="intervallo_minuti" value="{{ s.configurazione.intervallo_minuti or 60 }}"></div>
+        <div class="campo"><label for="m{{ s.id }}">Siti nuovi per esecuzione</label><input id="m{{ s.id }}" type="text" inputmode="numeric" name="max_siti_nuovi" value="{{ s.configurazione.max_siti_nuovi or 30 }}"></div>
+        {% if s.tipo == "telegram" %}
+        <div class="campo"><label for="c{{ s.id }}">Messaggi per canale</label><input id="c{{ s.id }}" type="text" inputmode="numeric" name="messaggi_per_canale" value="{{ s.configurazione.messaggi_per_canale or 200 }}"></div>
+        <div class="campo"><label for="d{{ s.id }}">File fino a (MB)</label><input id="d{{ s.id }}" type="text" inputmode="numeric" name="max_media_mb" value="{{ s.configurazione.max_media_mb or 25 }}"></div>
+        <div class="campo"><label><input type="checkbox" name="scarica_media" value="1"{% if s.configurazione.scarica_media %} checked{% endif %}> Scarica immagini, video e audio dei messaggi che superano il prefiltro</label></div>
+        {% else %}
+        <div class="campo"><label for="p{{ s.id }}">Profondità (0–2)</label><input id="p{{ s.id }}" type="text" inputmode="numeric" name="profondita" value="{{ s.configurazione.profondita or 1 }}"></div>
+        <div class="campo"><label for="x{{ s.id }}">Pagine per esecuzione</label><input id="x{{ s.id }}" type="text" inputmode="numeric" name="max_pagine" value="{{ s.configurazione.max_pagine or 40 }}"></div>
+        {% endif %}
+      </div>
+      {% if s.tipo in ("web", "tor") %}<div class="campo"><label for="s{{ s.id }}">Semi, uno per riga</label>
+        <textarea id="s{{ s.id }}" name="semi" spellcheck="false" placeholder="{{ 'http://…onion/' if s.tipo == 'tor' else 'https://directory-esempio.org/casino' }}">{{ (s.configurazione.semi or [])|join("\n") }}</textarea>
+        <p class="aiuto">{{ "Directory del dark web: accesso passivo, nessuna registrazione, nessun acquisto." if s.tipo == "tor" else "Directory, forum e pagine di pubblicità. Il crawler rispetta robots.txt e non ritenta le pagine bloccate." }}</p></div>{% endif %}
+      <button class="bottone" type="submit">Salva la configurazione</button>
+    </form>{% endif %}
+  </div></section>
+{% endfor %}
+{% endblock %}

@@ -1,4 +1,4 @@
-{% from "parti/macro.html" import icona, stato, ripartizione %}
+{% from "parti/macro.html" import icona, stato, ripartizione, grafico_crescita %}
 <div class="pila" id="riepilogo" hx-get="/cruscotto/riepilogo" hx-trigger="every 10s" hx-swap="outerHTML">
   <div class="griglia c4">
     <a class="scheda numero" href="/siti"><span class="etichetta">{{ icona("siti") }} Siti in analisi</span>
@@ -47,6 +47,8 @@
       </div>
     </section>
   </div>
+  <section class="scheda"><header><h2>Siti nuovi negli ultimi 14 giorni</h2><a href="/sonde">Sonde</a></header>
+    <div class="corpo">{{ grafico_crescita(d.crescita) }}</div></section>
   <section class="scheda">
     <header><h2>Attività recente</h2><a href="/lavori">Tutti i lavori</a></header>
     {% if d.ultimi_lavori %}
