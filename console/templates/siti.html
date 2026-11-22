@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block titolo %}Siti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Siti</h1><p>Ogni sito è un dominio registrabile. L'esito ADM viene dal confronto con gli elenchi, non dal testo del sito.</p></div></div>
+<section class="scheda">
+  <form class="filtri" action="/siti" method="get" hx-get="/siti" hx-target="#tabella-siti" hx-swap="outerHTML" hx-trigger="input changed delay:300ms from:#filtro-q, change from:#filtro-esito" hx-push-url="true">
+    <input id="filtro-q" type="search" name="q" value="{{ q }}" placeholder="Filtra per dominio" aria-label="Filtra per dominio">
+    <select id="filtro-esito" name="esito" aria-label="Esito ADM">
+      <option value="">Tutti gli esiti ADM</option>
+      {% for chiave, coppia in ESITI_ADM.items() %}<option value="{{ chiave }}"{% if esito == chiave %} selected{% endif %}>{{ coppia[0] }}</option>{% endfor %}
+    </select>
+    <noscript><button class="bottone" type="submit">Filtra</button></noscript>
+  </form>
+  {% include "parti/siti_tabella.html" %}
+</section>
+{% endblock %}

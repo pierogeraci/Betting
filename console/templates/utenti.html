@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Utenti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Utenti</h1><p>Account degli operatori del portale. Ogni inserimento e ogni revisione registrano chi li ha fatti.</p></div></div>
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Account</h2></header><div class="corpo stretto tabella-contenitore"><table>
+    <thead><tr><th>Nome utente</th><th>Ruolo</th><th>Stato</th><th>Nuova password</th><th></th></tr></thead><tbody>
+    {% for u in utenti %}<tr><td><strong>{{ u.nome_utente }}</strong><span class="secondario">{{ u.nome }}</span></td>
+      <td>{{ "Amministratore" if u.ruolo == "amministratore" else "Analista" }}</td>
+      <td><span class="etichetta-stato {{ 'ok' if u.attivo else 'neutral' }}">{{ "Attivo" if u.attivo else "Disattivato" }}</span></td>
+      <td><form class="riga" method="post" action="/utenti/{{ u.id }}/password">{{ csrf_campo(csrf) }}
+        <input type="password" name="password" minlength="12" required autocomplete="new-password" aria-label="Nuova password per {{ u.nome_utente }}">
+        <button class="bottone piccolo" type="submit">Reimposta</button></form></td>
+      <td>{% if u.id != utente.id %}<form method="post" action="/utenti/{{ u.id }}/stato">{{ csrf_campo(csrf) }}
+        <button class="bottone piccolo{% if u.attivo %} pericolo{% endif %}" type="submit">{{ "Disattiva" if u.attivo else "Riattiva" }}</button></form>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+  <section class="scheda"><header><h2>Nuovo utente</h2></header>
+    <form class="corpo" method="post" action="/utenti">{{ csrf_campo(csrf) }}
+      {% if errore %}<div class="messaggio errore campo" role="alert">{{ errore }}</div>{% endif %}
+      <div class="campo"><label for="nu">Nome utente</label><input id="nu" name="nome_utente" type="text" required value="{{ form.nome_utente if form else '' }}" autocomplete="off"></div>
+      <div class="campo"><label for="nn">Nome e cognome</label><input id="nn" name="nome" type="text" value="{{ form.nome if form else '' }}"></div>
+      <div class="campo"><label for="nr">Ruolo</label><select id="nr" name="ruolo"><option value="analista">Analista</option><option value="amministratore"{% if form and form.ruolo == "amministratore" %} selected{% endif %}>Amministratore</option></select></div>
+      <div class="campo"><label for="np">Password iniziale</label><input id="np" name="password" type="password" minlength="12" required autocomplete="new-password"><p class="aiuto">Almeno 12 caratteri.</p></div>
+      <button class="bottone primario" type="submit">Crea utente</button>
+    </form></section>
+</div>
+{% endblock %}

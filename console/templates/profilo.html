@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Profilo{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>{{ utente.nome or utente.nome_utente }}</h1><p>{{ utente.nome_utente }} · {{ "Amministratore" if utente.ruolo == "amministratore" else "Analista" }}</p></div></div>
+<div class="griglia c2"><section class="scheda"><header><h2>Cambia password</h2></header>
+  <form class="corpo" method="post" action="/profilo/password">{{ csrf_campo(csrf) }}
+    {% if errore %}<div class="messaggio errore campo" role="alert">{{ errore }}</div>{% endif %}
+    <div class="campo"><label for="pa">Password attuale</label><input id="pa" name="attuale" type="password" required autocomplete="current-password"></div>
+    <div class="campo"><label for="pn">Nuova password</label><input id="pn" name="nuova" type="password" minlength="12" required autocomplete="new-password"><p class="aiuto">Almeno 12 caratteri.</p></div>
+    <div class="campo"><label for="pc">Ripeti la nuova password</label><input id="pc" name="conferma" type="password" minlength="12" required autocomplete="new-password"></div>
+    <button class="bottone primario" type="submit">Aggiorna la password</button>
+  </form></section></div>
+{% endblock %}

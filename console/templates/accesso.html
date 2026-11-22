@@ -1,0 +1,28 @@
+{% from "parti/macro.html" import icona %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accesso · Betting</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<main class="accesso">
+  <div class="scheda"><div class="corpo">
+    <span class="logo">{{ icona("logo") }}</span>
+    <h1>Accedi al portale</h1>
+    <p class="sotto">Ricerca e analisi dei siti di scommesse illegali.</p>
+    {% if errore %}<div class="messaggio errore campo" role="alert">{{ errore }}</div>{% endif %}
+    <form method="post" action="/accesso">
+      <div class="campo"><label for="nome_utente">Nome utente</label>
+        <input id="nome_utente" name="nome_utente" type="text" autocomplete="username" required autofocus value="{{ nome_utente or '' }}"></div>
+      <div class="campo"><label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="bottone primario" type="submit">Accedi</button>
+    </form>
+  </div></div>
+</main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+# Indirizzi da cui il contenitore di raccolta scarica gli elenchi ADM.
+# Lascia vuoto un indirizzo per caricare quell'elenco solo a mano dal portale.
+# Gli indirizzi vanno verificati sul portale ADM: il formato pubblicato può cambiare.
+adm:
+  siti_inibiti: ""
+  concessionari: ""

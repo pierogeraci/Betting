@@ -1,0 +1,58 @@
+{% from "parti/macro.html" import icona, csrf_campo %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf" content="{{ csrf }}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+  <title>{% block titolo %}Portale{% endblock %} · Betting</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="guscio">
+  <nav class="laterale" aria-label="Sezioni">
+    <a class="marchio" href="/"><span class="logo">{{ icona("logo") }}</span><span>Betting<small>Analisi siti di scommesse</small></span></a>
+    {% set voci = [("cruscotto", "/", "Cruscotto"), ("nuovo", "/nuovo", "Nuovo elemento"), ("siti", "/siti", "Siti"), ("revisioni", "/revisioni", "Revisione manuale")] %}
+    {% for chiave, url, nome in voci %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span>
+      {% if chiave == "revisioni" and revisioni %}<span class="conta">{{ revisioni }}</span>{% endif %}</a>
+    {% endfor %}
+    <div class="gruppo-voci">Dati</div>
+    {% for chiave, url, nome in [("adm", "/adm", "Elenchi ADM"), ("archivio", "/archivio", "Archivio grezzo"), ("lavori", "/lavori", "Lavori")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(chiave) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    {% if utente and utente.ruolo == "amministratore" %}
+    <div class="gruppo-voci">Amministrazione</div>
+    <a class="voce" href="/utenti"{% if sezione == "utenti" %} aria-current="page"{% endif %}>{{ icona("utenti") }}<span>Utenti</span></a>
+    {% endif %}
+    <div class="piede">
+      <a href="/profilo"><strong>{{ utente.nome or utente.nome_utente }}</strong></a>
+      {{ "Amministratore" if utente.ruolo == "amministratore" else "Analista" }}
+    </div>
+  </nav>
+  <div class="principale">
+    <header class="barra">
+      <button class="bottone icona-sola solo-mobile" type="button" data-azione="menu" aria-label="Apri il menu">{{ icona("menu") }}</button>
+      <form class="cerca" action="/ricerca" method="get" role="search">
+        {{ icona("cerca") }}
+        <input type="search" name="q" placeholder="Cerca un dominio…" aria-label="Cerca un dominio" value="{{ q or '' }}">
+      </form>
+      <span class="spazio"></span>
+      <a class="bottone primario" href="/nuovo">{{ icona("nuovo") }}<span>Nuovo</span></a>
+      <button class="bottone icona-sola" type="button" data-azione="tema" aria-label="Cambia tema chiaro o scuro">{{ icona("tema") }}</button>
+      <form action="/uscita" method="post">{{ csrf_campo(csrf) }}
+        <button class="bottone icona-sola" type="submit" aria-label="Esci">{{ icona("esci") }}</button></form>
+    </header>
+    <main class="contenuto">
+      {% if avviso %}<div class="messaggio {{ avviso.tipo }}" role="status">{{ avviso.testo }}</div>{% endif %}
+      {% block contenuto %}{% endblock %}
+    </main>
+  </div>
+</div>
+</body>
+</html>

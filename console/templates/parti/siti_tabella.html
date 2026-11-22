@@ -1,0 +1,18 @@
+{% from "parti/macro.html" import stato, paginazione %}
+<div id="tabella-siti">
+{% if righe %}
+<div class="tabella-contenitore"><table>
+  <thead><tr><th>Dominio</th><th>Esito ADM</th><th>Ultimo snapshot</th><th>Primo avvistamento</th></tr></thead>
+  <tbody>{% for s in righe %}{% set u = ultimi.get(s.id) %}
+    <tr><td><a href="/siti/{{ s.id }}"><strong>{{ s.dominio }}</strong></a>{% if u and u.titolo %}<span class="secondario taglia">{{ u.titolo }}</span>{% endif %}</td>
+      <td>{{ stato(s.esito_adm, ESITI_ADM) }}</td>
+      <td>{% if u %}{{ stato(u.stato) }} <span class="secondario">{{ u.raccolto_il|quando }}</span>{% else %}<span class="secondario">In attesa</span>{% endif %}</td>
+      <td>{{ s.primo_avvistamento|quando("%d/%m/%Y") }}</td></tr>
+  {% endfor %}</tbody></table></div>
+{{ paginazione(pag, "/siti?q=" ~ (q|urlencode) ~ "&esito=" ~ esito ~ "&") }}
+{% else %}
+<div class="vuoto"><h3>{{ "Nessun sito corrisponde ai filtri" if q or esito else "Nessun sito ancora" }}</h3>
+  <p>{{ "Prova a cambiare ricerca o filtro." if q or esito else "Inserisci un URL per iniziare." }}</p>
+  {% if not (q or esito) %}<a class="bottone primario" href="/nuovo">Inserisci un URL</a>{% endif %}</div>
+{% endif %}
+</div>

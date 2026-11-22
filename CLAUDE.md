@@ -34,15 +34,18 @@ Non aggiungere dipendenze fuori da questo elenco senza chiedere.
 
 ## Comandi
 
-La Fase 0 deve creare questi comandi; quando esistono, aggiorna questa sezione con la forma esatta.
-
-- `make test`: test unitari, solo su fixture, senza rete
-- `make collect SONDA=<nome> LIMITE=<n>`: esegue una sonda su dati reali nel suo contenitore, fermandosi al limite indicato
-- `make test-integration`: prove su dati reali, dalla raccolta al Trust Index
-- `make telegram-login`: primo accesso dell'account Telegram; lo esegue l'utente, perché richiede il codice ricevuto sul telefono
-- `make lint`: formattazione e controlli statici
-- `make eval`: valutazione sul set etichettato
-- `docker compose up -d db`: database locale
+- `make setup`: ambiente Python locale (`.venv`) per test e lint
+- `make env`: crea `.env` con segreti casuali, se non esiste
+- `make up` / `make down`: avvia o ferma database, archivio, portale, lavoratore e raccolta
+- `make init`: migrazioni, password del ruolo `raccolta`, secchi dell'archivio
+- `make create-user UTENTE=<nome> RUOLO=analista|amministratore`: account del portale
+- `make test`: test unitari, solo su fixture, senza rete; serve `docker compose up -d db`
+- `make lint`: `ruff check` e `ruff format --check`
+- `make collect SONDA=<nome> LIMITE=<n>`: esegue una sonda su dati reali nel suo contenitore, fermandosi al limite indicato. Sonde: `snapshot`, `adm`
+- `make test-integration`: prove su dati reali; legge `PROVA_URLS` da `.env` (al massimo tre URL)
+- `make telegram-login`: primo accesso dell'account Telegram; lo esegue l'utente (arriva con la Fase 2)
+- `make eval`: valutazione sul set etichettato (arriva con la Fase 3)
+- Nelle sessioni cloud dietro proxy: aggiungere `COMPOSE_EXTRA="-f compose.sessione.yaml"` ai comandi `make`
 
 ## Vincoli non negoziabili
 

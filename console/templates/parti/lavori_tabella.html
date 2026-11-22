@@ -1,0 +1,14 @@
+{% from "parti/macro.html" import stato, paginazione, csrf_campo %}
+<div id="tabella-lavori" hx-get="/lavori?stato={{ filtro }}&pagina={{ pag.number }}" hx-trigger="every 5s" hx-swap="outerHTML">
+{% if righe %}
+<div class="tabella-contenitore"><table><thead><tr><th>N.</th><th>Lavoro</th><th>Dove gira</th><th>Sito</th><th>Stato</th><th>Tentativi</th><th>Creato</th><th>Esito</th><th></th></tr></thead><tbody>
+{% for l in righe %}<tr><td class="mono">{{ l.id }}</td><td>{{ TIPI_LAVORO.get(l.tipo, l.tipo) }}</td>
+  <td>{{ "Contenitore di raccolta" if l.coda == "raccolta" else "Rete interna" }}</td>
+  <td>{% if l.sito %}<a href="/siti/{{ l.sito.id }}">{{ l.sito.dominio }}</a>{% else %}—{% endif %}</td>
+  <td>{{ stato(l.stato) }}</td><td class="num">{{ l.tentativi }}/{{ l.max_tentativi }}</td><td>{{ l.creato_il|quando }}</td>
+  <td>{% if l.errore %}<span class="taglia mono" title="{{ l.errore }}">{{ l.errore.splitlines()[0] }}</span>{% endif %}</td>
+  <td>{% if l.stato == "fallito" and utente.ruolo == "amministratore" %}<form method="post" action="/lavori/{{ l.id }}/riprova">{{ csrf_campo(csrf) }}<button class="bottone piccolo" type="submit">Riprova</button></form>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>
+{{ paginazione(pag, "/lavori?stato=" ~ filtro ~ "&") }}
+{% else %}<div class="vuoto"><h3>Nessun lavoro</h3><p>I lavori nascono quando inserisci un URL o carichi un elenco.</p></div>{% endif %}
+</div>

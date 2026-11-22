@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import paginazione %}
+{% block titolo %}Archivio grezzo{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Archivio grezzo</h1><p>Ogni elemento è conservato come raccolto, con fonte, data in UTC e hash. Lo stesso contenuto non entra due volte.</p></div></div>
+<section class="scheda">
+  <div class="filtri"><div class="pastiglie">
+    {% for chiave, nome in [("", "Tutte le fonti"), ("manuale", "Inserimento manuale"), ("adm", "Elenchi ADM")] %}
+    <a class="pastiglia" href="/archivio?fonte={{ chiave }}"{% if fonte == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>{% endfor %}
+  </div></div>
+  {% if righe %}
+  <div class="tabella-contenitore"><table><thead><tr><th>Riferimento</th><th>Fonte</th><th>Tipo</th><th>Raccolto il</th><th>Inserito da</th><th>Hash</th></tr></thead><tbody>
+  {% for e in righe %}<tr><td><a class="taglia" href="/archivio/{{ e.id }}">{{ e.riferimento or "—" }}</a></td><td>{{ e.fonte }}</td>
+    <td>{{ e.media[0].tipo if e.media else e.tipo }}</td><td>{{ e.raccolto_il|quando }}</td><td>{{ e.autore.nome_utente if e.autore else "—" }}</td>
+    <td class="mono" title="{{ e.sha256 }}">{{ e.sha256|breve }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {{ paginazione(pag, "/archivio?fonte=" ~ fonte ~ "&") }}
+  {% else %}<div class="vuoto"><h3>Archivio vuoto</h3><p>Gli elementi arrivano dagli inserimenti manuali, dagli elenchi ADM e, più avanti, dalle sonde.</p></div>{% endif %}
+</section>
+{% endblock %}

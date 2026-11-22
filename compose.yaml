@@ -1,0 +1,107 @@
+# Due reti: `interna` per database, archivio, portale e lavoratore; `raccolta` per i
+# contenitori che leggono contenuti ostili. Da `raccolta` si vedono solo il database
+# (con il ruolo ristretto) e l'archivio (con la chiave che scrive nel secchio di arrivo).
+name: betting
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/app.Dockerfile
+    args:
+      IMMAGINE_PYTHON: ${IMMAGINE_PYTHON:-python:3.12-slim}
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-betting}:${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-betting}
+    RACCOLTA_DB_PASSWORD: ${RACCOLTA_DB_PASSWORD:?manca RACCOLTA_DB_PASSWORD in .env}
+    S3_ENDPOINT: http://archivio:8333
+    S3_BUCKET: ${S3_BUCKET:-betting-grezzi}
+    S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+    S3_ACCESS_KEY: ${S3_ACCESS_KEY:?manca S3_ACCESS_KEY in .env}
+    S3_SECRET_KEY: ${S3_SECRET_KEY:?manca S3_SECRET_KEY in .env}
+    COOKIE_SICURI: ${COOKIE_SICURI:-false}
+    ADM_GIORNI_VALIDITA: ${ADM_GIORNI_VALIDITA:-30}
+    PROVA_URLS: ${PROVA_URLS:-}
+  networks: [interna]
+
+services:
+  db:
+    image: ${IMMAGINE_POSTGRES:-pgvector/pgvector:pg17}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-betting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?manca POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-betting}
+    volumes: [dati_db:/var/lib/postgresql/data]
+    ports: ["127.0.0.1:${PORTA_DB:-5432}:5432"]
+    networks: [interna, raccolta]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  archivio:
+    image: ${IMMAGINE_SEAWEEDFS:-chrislusf/seaweedfs:4.53}
+    entrypoint: ["/bin/sh", "/archivio.sh"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?manca S3_ACCESS_KEY in .env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?manca S3_SECRET_KEY in .env}
+      RACCOLTA_S3_ACCESS_KEY: ${RACCOLTA_S3_ACCESS_KEY:?manca RACCOLTA_S3_ACCESS_KEY in .env}
+      RACCOLTA_S3_SECRET_KEY: ${RACCOLTA_S3_SECRET_KEY:?manca RACCOLTA_S3_SECRET_KEY in .env}
+      S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+    volumes:
+      - dati_archivio:/data
+      - ./docker/archivio.sh:/archivio.sh:ro
+    ports: ["127.0.0.1:${PORTA_ARCHIVIO:-8333}:8333"]
+    networks: [interna, raccolta]
+
+  init:
+    <<: *app
+    command: ["python", "-m", "core.cli", "init"]
+    depends_on:
+      db: {condition: service_healthy}
+      archivio: {condition: service_started}
+    restart: "no"
+
+  portale:
+    <<: *app
+    ports: ["127.0.0.1:${PORTA_PORTALE:-8000}:8000"]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  lavoratore:
+    <<: *app
+    command: ["python", "-m", "core.worker"]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  raccolta:
+    build:
+      context: .
+      dockerfile: docker/raccolta.Dockerfile
+    environment:
+      RACCOLTA_DATABASE_URL: postgresql://raccolta:${RACCOLTA_DB_PASSWORD:?manca RACCOLTA_DB_PASSWORD in .env}@db:5432/${POSTGRES_DB:-betting}
+      S3_ENDPOINT: http://archivio:8333
+      S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+      RACCOLTA_S3_ACCESS_KEY: ${RACCOLTA_S3_ACCESS_KEY:?manca RACCOLTA_S3_ACCESS_KEY in .env}
+      RACCOLTA_S3_SECRET_KEY: ${RACCOLTA_S3_SECRET_KEY:?manca RACCOLTA_S3_SECRET_KEY in .env}
+      RACCOLTA_MAX_PAGINE_ORA: ${RACCOLTA_MAX_PAGINE_ORA:-120}
+    networks: [raccolta]
+    read_only: true
+    tmpfs: ["/tmp:size=512m", "/home/pwuser:size=256m,uid=1001"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    shm_size: 512m
+    mem_limit: 2g
+    pids_limit: 512
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+networks:
+  interna:
+  raccolta:
+
+volumes:
+  dati_db:
+  dati_archivio:

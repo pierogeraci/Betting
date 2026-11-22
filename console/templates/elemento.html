@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import icona %}
+{% block titolo %}Elemento {{ e.id }}{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Elemento grezzo n. {{ e.id }}</h1><p>{{ e.riferimento }}</p></div>
+  <div class="azioni"><a class="bottone" href="/archivio">Torna all'archivio</a>{% if sito %}<a class="bottone primario" href="/siti/{{ sito.id }}">Apri il sito {{ sito.dominio }}</a>{% endif %}</div></div>
+<div class="griglia c2">
+  <section class="scheda"><header><h2>Provenienza</h2></header><div class="corpo"><dl class="fatti">
+    <dt>Fonte</dt><dd>{{ e.fonte }}</dd><dt>Tipo</dt><dd>{{ e.tipo }}</dd>
+    <dt>Raccolto il</dt><dd>{{ e.raccolto_il.strftime("%Y-%m-%d %H:%M:%S") }} UTC</dd>
+    <dt>Inserito da</dt><dd>{{ e.autore.nome_utente if e.autore else "—" }}</dd>
+    <dt>sha256</dt><dd class="mono">{{ e.sha256 }}</dd>
+    {% if e.contenuto %}<dt>Contenuto</dt><dd class="mono">{{ e.contenuto }}</dd>{% endif %}
+    {% if e.metadati.nota %}<dt>Nota</dt><dd>{{ e.metadati.nota }}</dd>{% endif %}
+  </dl></div></section>
+  <section class="scheda"><header><h2>File</h2></header>
+    {% if e.media %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Nome</th><th>Tipo</th><th class="num">Dimensione</th><th></th></tr></thead><tbody>
+    {% for m in e.media %}<tr><td>{{ m.nome_file }}</td><td>{{ m.tipo }}</td><td class="num">{{ m.dimensione|dimensione }}</td>
+      <td><a class="bottone piccolo" href="/media/{{ m.id }}/scarica">{{ icona("scarica") }} Scarica</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="corpo"><p class="aiuto">I file si scaricano sempre come allegati: il portale non li apre. OCR, trascrizione e analisi degli APK arrivano con le fasi successive.</p></div>
+    {% else %}<div class="vuoto"><p>Nessun file collegato.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}

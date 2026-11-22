@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo, stato %}
+{% block titolo %}Nuovo elemento{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Nuovo elemento</h1>
+  <p>Un URL viene fotografato una sola volta, come pagina pubblica, e confrontato con gli elenchi ADM. Un file viene archiviato con il suo hash.</p></div></div>
+
+{% if accettati or rifiutati %}
+<section class="scheda"><header><h2>Esito dell'inserimento</h2></header>
+  <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>URL</th><th>Esito</th><th></th></tr></thead><tbody>
+  {% for a in accettati %}<tr><td><span class="taglia mono">{{ a.url.url }}</span></td>
+    <td><span class="etichetta-stato ok">{{ "Già noto, nuovo snapshot richiesto" if a.already_known else "Inserito" }}</span></td>
+    <td><a href="/siti/{{ a.site.id }}">Apri {{ a.site.dominio }}</a></td></tr>{% endfor %}
+  {% for r in rifiutati %}<tr><td><span class="taglia mono">{{ r.testo }}</span></td>
+    <td><span class="etichetta-stato danger">Rifiutato</span></td><td>{{ r.motivo }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endif %}
+
+<div class="griglia c2">
+  <section class="scheda"><header><h2>URL di un sito</h2></header>
+    <form class="corpo" method="post" action="/nuovo/url">{{ csrf_campo(csrf) }}
+      {% if errore_url %}<div class="messaggio errore campo" role="alert">{{ errore_url }}</div>{% endif %}
+      <div class="campo"><label for="urls">Uno o più URL, uno per riga</label>
+        <textarea id="urls" name="urls" placeholder="https://esempio.com/promo" required spellcheck="false">{{ urls or '' }}</textarea>
+        <p class="aiuto">Al massimo {{ max_urls }} per volta. Solo indirizzi http e https con un nome di dominio pubblico.</p></div>
+      <button class="bottone primario" type="submit">Avvia l'analisi</button>
+    </form>
+  </section>
+  <section class="scheda"><header><h2>File da una fonte chiusa</h2></header>
+    <form class="corpo" method="post" action="/nuovo/file" enctype="multipart/form-data">{{ csrf_campo(csrf) }}
+      {% if errore_file %}<div class="messaggio errore campo" role="alert">{{ errore_file }}</div>{% endif %}
+      <div class="campo"><div class="caricamento">
+        <strong id="nome-file">Scegli o trascina un file</strong>
+        Schermate, video, audio o APK, fino a {{ max_mb }} MB
+        <input type="file" name="file" required data-file="#nome-file" aria-label="File da archiviare"></div></div>
+      <div class="campo"><label for="nota">Da dove arriva</label>
+        <input id="nota" name="nota" type="text" maxlength="500" placeholder="Per esempio: gruppo WeChat segnalato il 12 novembre"></div>
+      <button class="bottone primario" type="submit">Archivia il file</button>
+      <p class="aiuto">Il file non viene aperto né eseguito. Non caricare dati personali di utenti o autori dei messaggi.</p>
+    </form>
+  </section>
+</div>
+{% endblock %}

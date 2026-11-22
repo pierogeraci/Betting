@@ -1,0 +1,62 @@
+{% from "parti/macro.html" import icona, stato, ripartizione %}
+<div class="pila" id="riepilogo" hx-get="/cruscotto/riepilogo" hx-trigger="every 10s" hx-swap="outerHTML">
+  <div class="griglia c4">
+    <a class="scheda numero" href="/siti"><span class="etichetta">{{ icona("siti") }} Siti in analisi</span>
+      <span class="valore">{{ d.siti_totali|migliaia }}</span>
+      {{ ripartizione([("ok", d.esiti.get("concessionario", 0)), ("danger", d.esiti.get("inibito", 0)), ("neutral", d.esiti.get("non_in_elenco", 0)), ("warn", d.esiti.get("non_determinabile", 0))], d.siti_totali) }}
+    </a>
+    <a class="scheda numero" href="/siti?esito=inibito"><span class="etichetta">{{ icona("adm") }} Inibiti da ADM</span>
+      <span class="valore">{{ d.esiti.get("inibito", 0)|migliaia }}</span>
+      <span class="nota">{{ d.esiti.get("concessionario", 0) }} concessionari · {{ d.esiti.get("non_in_elenco", 0) }} non in elenco</span></a>
+    <a class="scheda numero" href="/revisioni"><span class="etichetta">{{ icona("revisioni") }} Revisioni aperte</span>
+      <span class="valore">{{ d.revisioni_aperte|migliaia }}</span>
+      <span class="nota">Pagine bloccate da guardare a mano</span></a>
+    <a class="scheda numero" href="/lavori"><span class="etichetta">{{ icona("lavori") }} Lavori in coda</span>
+      <span class="valore">{{ (d.lavori.get("in_attesa", 0) + d.lavori.get("in_corso", 0))|migliaia }}</span>
+      <span class="nota">{{ d.lavori.get("in_corso", 0) }} in corso · {{ d.lavori.get("fallito", 0) }} falliti</span></a>
+  </div>
+  <div class="griglia c21">
+    <section class="scheda">
+      <header><h2>Ultimi siti inseriti</h2><a href="/siti">Tutti i siti</a></header>
+      {% if d.ultimi_siti %}
+      <div class="corpo stretto tabella-contenitore"><table>
+        <thead><tr><th>Dominio</th><th>Esito ADM</th><th>Ultimo snapshot</th></tr></thead>
+        <tbody>{% for s in d.ultimi_siti %}
+          <tr><td><a href="/siti/{{ s.id }}"><strong>{{ s.dominio }}</strong></a></td><td>{{ stato(s.esito_adm, ESITI_ADM) }}</td><td>{{ s.ultimo_snapshot_il|quando }}</td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}
+      <div class="vuoto"><h3>Nessun sito ancora</h3><p>Inserisci un URL: il portale ne fa lo snapshot e lo confronta con gli elenchi ADM.</p>
+        <a class="bottone primario" href="/nuovo">Inserisci il primo URL</a></div>
+      {% endif %}
+    </section>
+    <section class="scheda">
+      <header><h2>Elenchi ADM</h2><a href="/adm">Gestisci</a></header>
+      <div class="corpo pila">
+        {% for e in d.elenchi %}
+        <div class="riga tra">
+          <div><strong>{{ e.etichetta }}</strong>
+            <span class="secondario aiuto">{% if e.carico %}Versione {{ e.carico.versione }} · {{ e.carico.righe_valide|migliaia }} domini · verificato il {{ e.carico.verificato_il|quando("%d/%m/%Y") }}{% else %}Mai caricato{% endif %}</span></div>
+          {% if not e.carico %}<span class="etichetta-stato danger">Mancante</span>
+          {% elif e.vecchio %}<span class="etichetta-stato warn">Da aggiornare</span>
+          {% else %}<span class="etichetta-stato ok">Aggiornato</span>{% endif %}
+        </div>
+        {% endfor %}
+        {% if d.elenchi|selectattr("carico", "none")|list %}
+        <div class="messaggio avviso">Senza un elenco il confronto resta "non determinabile": un dominio non si può dichiarare assente da un elenco non letto.</div>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+  <section class="scheda">
+    <header><h2>Attività recente</h2><a href="/lavori">Tutti i lavori</a></header>
+    {% if d.ultimi_lavori %}
+    <div class="corpo stretto tabella-contenitore"><table>
+      <thead><tr><th>Lavoro</th><th>Sito</th><th>Stato</th><th>Creato</th></tr></thead>
+      <tbody>{% for l in d.ultimi_lavori %}
+        <tr><td>{{ TIPI_LAVORO.get(l.tipo, l.tipo) }}</td>
+          <td>{% if l.sito %}<a href="/siti/{{ l.sito.id }}">{{ l.sito.dominio }}</a>{% else %}—{% endif %}</td>
+          <td>{{ stato(l.stato) }}</td><td>{{ l.creato_il|quando }}</td></tr>
+      {% endfor %}</tbody></table></div>
+    {% else %}<div class="vuoto"><p>Nessun lavoro eseguito finora.</p></div>{% endif %}
+  </section>
+</div>

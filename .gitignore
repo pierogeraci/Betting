@@ -22,3 +22,4 @@ __pycache__/
 
 # Modelli scaricati
 models/
+*.egg-info/
