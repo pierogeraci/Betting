@@ -32,24 +32,27 @@ NO_REGISTRATION = [
     "ohne registrierung",
     "без регистрации",
 ]
+# Termini che indicano l'obbligo di un documento. Contano solo nelle condizioni o nella
+# registrazione e vicino a un verbo di obbligo (vedi OBLIGATION).
 DOCUMENT_REQUIRED = [
     "documento di identita",
     "documento d'identita",
     "carta d'identita",
-    "codice fiscale",
     "spid",
-    "kyc",
     "verifica dell'identita",
     "verifica identita",
     "verify your identity",
     "identity verification",
     "proof of identity",
     "proof of address",
-    "passport",
-    "passaporto",
+    "copia del passaporto",
+    "copy of your passport",
     "id document",
-    "know your customer",
 ]
+OBLIGATION = (
+    r"(serve|servono|richiest|obbligatori|necessari|devi|deve|dovrai|required|must|mandatory|need to|"
+    r"will be asked|e necessario)"
+)
 NO_DOCUMENT = [
     "no kyc",
     "without kyc",
@@ -57,9 +60,11 @@ NO_DOCUMENT = [
     "no verification",
     "no id required",
     "no documents",
-    "anonymous",
-    "anonimo",
-    "anonima",
+    "play anonymously",
+    "anonymous play",
+    "anonymous casino",
+    "gioco anonimo",
+    "gioca in anonimo",
     "senza documenti",
     "nessun documento",
     "sin verificacion",

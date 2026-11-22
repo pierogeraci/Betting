@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tempfile
 import time
 from datetime import UTC, datetime
@@ -28,6 +29,12 @@ MAX_HTML_BYTES = 5_000_000
 MAX_SHOT_HEIGHT = 6000
 MAX_ICON_BYTES = 200_000
 VIEWPORT = {"width": 1366, "height": 900}
+
+
+def url_host(url: str) -> str:
+    from urllib.parse import urlsplit
+
+    return (urlsplit(url).hostname or "").lower()
 
 
 def _sha(data: bytes) -> str:
@@ -96,10 +103,18 @@ def _icon(context: Any, page: Any) -> dict[str, bytes]:
             " return l ? l.getAttribute('href') : null; })()"
         )
         icon_url = urljoin(page.url, href or "/favicon.ico")
-        if not url_allowed(icon_url) or not icon_url.startswith(("http://", "https://")):
-            return {}
-        response = context.request.get(icon_url, timeout=10_000, max_redirects=3)
-        body = response.body() if response.ok else b""
+        body = b""
+        # Le richieste di APIRequestContext non passano dalla route della pagina:
+        # i reindirizzamenti si seguono a mano, controllando ogni salto.
+        for _ in range(4):
+            if not icon_url.startswith(("http://", "https://")) or not url_allowed(icon_url):
+                return {}
+            response = context.request.get(icon_url, timeout=10_000, max_redirects=0)
+            if 300 <= response.status < 400 and response.headers.get("location"):
+                icon_url = urljoin(icon_url, response.headers["location"])
+                continue
+            body = response.body() if response.ok else b""
+            break
     except Exception:  # noqa: BLE001 - l'icona è facoltativa
         return {}
     return {"icona": body} if 0 < len(body) <= MAX_ICON_BYTES else {}
@@ -118,7 +133,12 @@ def capture(url: str) -> tuple[dict[str, Any], dict[str, bytes]]:
     with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
         har_path = Path(tmp) / "traffico.har"
         launch: dict[str, Any] = {"headless": True}
-        if settings.collect_proxy:
+        if url_host(url).endswith(".onion"):
+            # I siti .onion passano dal proxy SOCKS del contenitore Tor.
+            launch["proxy"] = {
+                "server": os.environ.get("TOR_SOCKS_URL", "socks5://tor:9050").replace("socks5h", "socks5")
+            }
+        elif settings.collect_proxy:
             launch["proxy"] = {"server": settings.collect_proxy}
         browser = pw.chromium.launch(**launch)
         info["versione_strumento"] = f"{browser.version}"
@@ -145,6 +165,17 @@ def capture(url: str) -> tuple[dict[str, Any], dict[str, bytes]]:
                 route.abort("blockedbyclient")
 
         page.route("**/*", route_handler)
+        # La route vede solo il primo URL di una catena di reindirizzamenti: le navigazioni
+        # si controllano anche qui, e una pagina che porta a un indirizzo interno si scarta.
+        unsafe_navigation: list[str] = []
+        page.on(
+            "request",
+            lambda req: (
+                unsafe_navigation.append(req.url)
+                if req.is_navigation_request() and not url_allowed(req.url)
+                else None
+            ),
+        )
         state, error, response = "riuscito", None, None
         try:
             response = page.goto(url, wait_until="load", timeout=NAV_TIMEOUT_MS)
@@ -178,6 +209,12 @@ def capture(url: str) -> tuple[dict[str, Any], dict[str, bytes]]:
                 )
             except PlaywrightError as exc:
                 state, error = "errore", str(exc).splitlines()[0][:500]
+        if unsafe_navigation:
+            state, error = (
+                "errore",
+                "La pagina ha reindirizzato verso un indirizzo non pubblico: contenuto scartato",
+            )
+            html, title, files = "", None, {}
         chain = redirect_chain(response) if response is not None else []
         context.close()
         browser.close()

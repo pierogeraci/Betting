@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 
 from collectors import terms
-from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, find_terms, normalize
+from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, excerpt, find_terms, normalize
+from collectors.pages import page_kind
 
 NOME = "identificazione"
 VERSIONE = "1"
@@ -40,6 +41,20 @@ def _registration_link(pages: list[Page]):
     return None
 
 
+def _document_obligation(pages: list[Page]):
+    """Obbligo di documento: solo in condizioni, registrazione o aiuto, vicino a un verbo di obbligo."""
+    for p in pages:
+        if not p.readable or page_kind(p) not in {"termini", "registrazione", "faq"}:
+            continue
+        text = p.text_norm
+        for term in terms.DOCUMENT_REQUIRED:
+            for m in re.finditer(re.escape(normalize(term)), text):
+                window = text[max(0, m.start() - 120) : m.end() + 120]
+                if re.search(terms.OBLIGATION, window):
+                    return p, excerpt(text, m.start(), m.end())
+    return None
+
+
 def collect(pages: list[Page]) -> list[Indicator]:
     out: list[Indicator] = []
     no_reg = _first(pages, terms.NO_REGISTRATION)
@@ -60,7 +75,7 @@ def collect(pages: list[Page]) -> list[Indicator]:
     if no_doc:
         out.append(_ind("assenza_documento", PRESENTE, 0.75, evidence(*no_doc)))
     else:
-        doc = _first(pages, terms.DOCUMENT_REQUIRED)
+        doc = _document_obligation(pages)
         if doc:
             out.append(_ind("assenza_documento", ASSENTE, 0.6, evidence(*doc)))
         else:

@@ -20,6 +20,7 @@ AMOUNT_RE = re.compile(
 )
 SYMBOLS = {"€": "EUR", "$": "USD", "£": "GBP"}
 STAKE_HEAD = re.compile(r"(?i)\b(bet|stake|puntata|importo puntato|wager|giocata|amount)\b")
+PLAYER_HEAD = re.compile(r"(?i)player|gamer|user|utente|giocatore|nick|name|nome|account")
 WIN_HEAD = re.compile(r"(?i)\b(win|payout|vincita|vinto|profit|vincite|prize)\b")
 
 
@@ -105,8 +106,14 @@ def observed_bets(page: Page) -> list[BetRow]:
         win_col = next((i for i, h in enumerate(header) if WIN_HEAD.search(h)), None)
         if stake_col is None or win_col is None:
             continue
+        # Colonna del gioco: parola intera, mai un'intestazione che indica il giocatore.
         game_col = next(
-            (i for i, h in enumerate(header) if re.search(r"(?i)game|gioco|slot|evento", h)), None
+            (
+                i
+                for i, h in enumerate(header)
+                if re.search(r"(?i)\b(game|gioco|slot|evento|event)\b", h) and not PLAYER_HEAD.search(h)
+            ),
+            None,
         )
         for row in table[1:]:
             if len(row) <= max(stake_col, win_col):

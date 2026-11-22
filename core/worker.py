@@ -58,6 +58,20 @@ def _ingest_network(session: Session, job: Lavoro) -> dict[str, Any]:
     return ingest.ingest_network(session, _origin(session, job))
 
 
+@handler("acquisisci_telegram")
+def _ingest_telegram(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.ingest_probes import ingest_telegram
+
+    return ingest_telegram(session, _origin(session, job))
+
+
+@handler("acquisisci_crawl")
+def _ingest_crawl(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core.ingest_probes import ingest_crawl
+
+    return ingest_crawl(session, _origin(session, job))
+
+
 @handler("profila")
 def _profile(session: Session, job: Lavoro) -> dict[str, Any]:
     from core import profiling
@@ -150,7 +164,19 @@ def main() -> None:
     worker = f"{socket.gethostname()}:{os.getpid()}"
     once = "--una-volta" in sys.argv
     log.info("lavoratore interno avviato (%s)", worker)
+    last_tick = 0.0
     while True:
+        if time.time() - last_tick > 60:
+            last_tick = time.time()
+            try:
+                from core import scheduler
+
+                with session_scope() as session:
+                    started = scheduler.tick(session)
+                if started:
+                    log.info("sonde avviate: %s", ", ".join(started))
+            except Exception as exc:  # noqa: BLE001 - il pianificatore non deve fermare il lavoratore
+                log.warning("pianificatore: %s", exc)
         if not run_one(worker):
             if once:
                 return

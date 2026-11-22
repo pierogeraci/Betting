@@ -40,6 +40,9 @@ class Indicator:
         }
 
 
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+
 class _Parser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -51,8 +54,9 @@ class _Parser(HTMLParser):
         self.tags: list[str] = []
         self.icons: list[str] = []
         self.text: list[str] = []
-        self.footer_depth = 0
         self.footer: list[str] = []
+        self._open: dict[str, int] = {}
+        self._footer_marks: list[tuple[str, int]] = []
         self._skip = 0
         self._a: tuple[str, list[str]] | None = None
         self._script: list[str] | None = None
@@ -79,8 +83,13 @@ class _Parser(HTMLParser):
             self.forms.append({"action": a.get("action", ""), "inputs": []})
         elif tag == "input" and self.forms:
             self.forms[-1]["inputs"].append((a.get("type", "text"), a.get("name", "")))
-        if tag == "footer" or "footer" in a.get("class", "").lower() or "footer" in a.get("id", "").lower():
-            self.footer_depth += 1
+        if tag not in VOID:
+            self._open[tag] = self._open.get(tag, 0) + 1
+            classes = a.get("class", "").lower().split() + [a.get("id", "").lower()]
+            if tag == "footer" or any(
+                c in {"footer", "site-footer", "page-footer", "main-footer"} for c in classes
+            ):
+                self._footer_marks.append((tag, self._open[tag]))
 
     def handle_endtag(self, tag):
         if tag in {"script", "style", "noscript", "template"} and self._skip:
@@ -91,8 +100,10 @@ class _Parser(HTMLParser):
         elif tag == "a" and self._a is not None:
             self.links.append((self._a[0], " ".join("".join(self._a[1]).split())))
             self._a = None
-        elif tag == "footer" and self.footer_depth:
-            self.footer_depth -= 1
+        if tag not in VOID and self._open.get(tag):
+            if self._footer_marks and self._footer_marks[-1] == (tag, self._open[tag]):
+                self._footer_marks.pop()
+            self._open[tag] -= 1
 
     def handle_data(self, data):
         if self._script is not None:
@@ -102,7 +113,7 @@ class _Parser(HTMLParser):
         self.text.append(data)
         if self._a is not None:
             self._a[1].append(data)
-        if self.footer_depth:
+        if self._footer_marks:
             self.footer.append(data)
 
 
@@ -139,6 +150,10 @@ class Page:
     @cached_property
     def footer_text(self) -> str:
         return " ".join(" ".join(self.parsed.footer).split())
+
+    @property
+    def secondary(self) -> bool:
+        return bool(self.extra.get("secondaria"))
 
     @property
     def readable(self) -> bool:
@@ -203,3 +218,8 @@ def evidence(page: Page, quote: str, **extra: Any) -> dict[str, Any]:
 
 def any_readable(pages: list[Page]) -> bool:
     return any(p.readable for p in pages)
+
+
+def readable_home(pages: list[Page]) -> Page | None:
+    """La pagina principale, se letta: serve per dire "assente" di ciò che una home mostra."""
+    return next((p for p in pages if p.readable and not p.secondary), None)

@@ -11,10 +11,10 @@ from core.storage import sha256_hex
 F = Path(__file__).resolve().parent.parent / "fixtures" / "snapshots"
 
 
-def drop_snapshot(db, store, url, fixture, secondary=False, hosts=()):
+def drop_snapshot(db, store, url, fixture, secondary=False, hosts=(), html=None):
     site = intake.get_or_create_site(db, intake.normalize_url(url).registrable)
     job = intake.request_snapshot(db, site, url, secondary=secondary)
-    html = (F / fixture).read_bytes()
+    html = html if html is not None else (F / fixture).read_bytes()
     har = json.dumps(
         {
             "log": {
@@ -147,13 +147,9 @@ def test_licensee_is_excluded(db, store):
 def test_twins_by_tracking_id(db, store):
     a, _ = drop_snapshot(db, store, "https://www.luckymoon.example.com/", "crypto_home.html")
     profiling.profile_site(db, a)
-    html = (F / "crypto_home.html").read_text().replace("LuckyMoon", "SunnyStar")
-    (F / "_gemello.html").write_text(html)
-    try:
-        b, _ = drop_snapshot(db, store, "https://sunnystar-bet.example.org/", "_gemello.html")
-        profiling.profile_site(db, b)
-    finally:
-        (F / "_gemello.html").unlink()
+    html = (F / "crypto_home.html").read_text().replace("LuckyMoon", "SunnyStar").encode()
+    b, _ = drop_snapshot(db, store, "https://sunnystar-bet.example.org/", None, html=html)
+    profiling.profile_site(db, b)
     reasons = {(row.motivo, row.valore) for row in db.query(LegameSito)}
     assert ("tracciamento", "google_analytics:G-ABC123XYZ9") in reasons
     assert "struttura_html" in {r for r, _ in reasons}

@@ -85,7 +85,10 @@ def site_pages(session: Session, site: Sito) -> list[Page]:
     for snap in ordered:
         html = read_archive(snap.html_chiave).decode("utf-8", "replace") if snap.html_chiave else ""
         hosts = traffic_hosts(read_archive(snap.traffico_chiave)) if snap.traffico_chiave else []
-        extra = {"icona_sha256": snap.metadati.get("icona_sha256")}
+        extra = {
+            "icona_sha256": snap.metadati.get("icona_sha256"),
+            "secondaria": bool(snap.metadati.get("secondaria")),
+        }
         if not pages:
             extra["rete"] = network
         pages.append(
@@ -100,6 +103,14 @@ def site_pages(session: Session, site: Sito) -> list[Page]:
             )
         )
     return pages
+
+
+def iban_fingerprint(iban: str) -> str:
+    """Un IBAN può essere di una persona: si conservano paese e banca, più un'impronta per i confronti."""
+    import hashlib
+
+    clean = iban.replace(" ", "").upper()
+    return f"{clean[:2]}…{clean[4:9]} #{hashlib.sha256(clean.encode()).hexdigest()[:16]}"
 
 
 ENTITY_FROM_INDICATOR = {
@@ -145,8 +156,15 @@ def _register_entities(session: Session, site: Sito, rows: list[dict[str, Any]],
     for page in pages:
         if page.readable:
             for e in extract(page.text):
-                if e.kind.startswith("portafoglio_") or e.kind == "iban":
+                if e.kind.startswith("portafoglio_"):
                     link_entities(session, domain, get_or_create_entity(session, e.kind, e.value), "pubblica")
+                elif e.kind == "iban":
+                    link_entities(
+                        session,
+                        domain,
+                        get_or_create_entity(session, "iban", iban_fingerprint(e.value)),
+                        "pubblica",
+                    )
 
 
 def _store_observed_bets(session: Session, site: Sito, pages: list[Page]) -> int:

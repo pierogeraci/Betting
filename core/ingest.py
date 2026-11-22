@@ -227,6 +227,12 @@ def ingest_network(session: Session, origin: Lavoro) -> dict[str, Any]:
         select(ElementoGrezzo.id).where(ElementoGrezzo.fonte == "rete", ElementoGrezzo.sha256 == digest)
     ).first()
     if not exists:
+        try:
+            collected = datetime.fromisoformat(str(manifest.get("raccolto_il")))
+            if collected.tzinfo is None:
+                raise ValueError
+        except ValueError:
+            collected = utcnow()
         session.add(
             ElementoGrezzo(
                 fonte="rete",
@@ -234,7 +240,7 @@ def ingest_network(session: Session, origin: Lavoro) -> dict[str, Any]:
                 riferimento=domain,
                 contenuto=content,
                 sha256=digest,
-                raccolto_il=utcnow(),
+                raccolto_il=collected,
                 metadati={"lavoro": origin.id},
             )
         )

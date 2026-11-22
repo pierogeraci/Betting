@@ -71,6 +71,7 @@ class Sonda(Base):
     stato: Mapped[str] = mapped_column(String(20), default="attiva")
     ultima_esecuzione: Mapped[datetime | None] = mapped_column(TS)
     ultimo_errore: Mapped[str | None] = mapped_column(Text)
+    disponibile_dal: Mapped[datetime | None] = mapped_column(TS)
     creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
 
 
@@ -169,6 +170,7 @@ class Sito(Base):
     gruppo: Mapped[int | None] = mapped_column(Integer, index=True)
     # Sintesi del confronto con gli elenchi ADM, ricalcolata a ogni confronto.
     esito_adm: Mapped[str] = mapped_column(String(30), default="non_determinabile", index=True)
+    fonte_scoperta: Mapped[str | None] = mapped_column(String(40))
     primo_avvistamento: Mapped[datetime] = mapped_column(TS, default=utcnow)
     ultimo_snapshot_il: Mapped[datetime | None] = mapped_column(TS)
     creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
@@ -383,3 +385,58 @@ class LegameSito(Base):
     forza: Mapped[float] = mapped_column(Numeric(4, 3), default=1)
     creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
     __table_args__ = (UniqueConstraint("sito_a", "sito_b", "motivo", "valore", name="legame_sito_unico"),)
+
+
+class Canale(Base):
+    """Canale o gruppo pubblico monitorato da una sonda. Nessun dato sui membri: solo il loro numero."""
+
+    __tablename__ = "canale"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    piattaforma: Mapped[str] = mapped_column(String(20), default="telegram")
+    identificativo: Mapped[str] = mapped_column(String(120))
+    titolo: Mapped[str] = mapped_column(String(300), default="")
+    tipo: Mapped[str | None] = mapped_column(String(20))
+    stato: Mapped[str] = mapped_column(String(20), default="da_approvare", index=True)
+    partecipanti: Mapped[int | None] = mapped_column(Integer)
+    cursore: Mapped[int] = mapped_column(BigInteger, default=0)
+    scoperto_da: Mapped[int | None] = mapped_column(ForeignKey("elemento_grezzo.id", ondelete="SET NULL"))
+    motivo: Mapped[str] = mapped_column(Text, default="")
+    ultimo_controllo: Mapped[datetime | None] = mapped_column(TS)
+    ultimo_errore: Mapped[str | None] = mapped_column(Text)
+    approvato_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (
+        UniqueConstraint("piattaforma", "identificativo", name="canale_unico"),
+        CheckConstraint(
+            "stato in ('da_approvare','attivo','in_pausa','rifiutato','in_errore')", name="canale_stato"
+        ),
+    )
+
+
+class ParolaChiave(Base):
+    __tablename__ = "parola_chiave"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    termine: Mapped[str] = mapped_column(String(120))
+    categoria: Mapped[str] = mapped_column(String(40), default="gioco")
+    lingua: Mapped[str] = mapped_column(String(10), default="it")
+    attiva: Mapped[bool] = mapped_column(Boolean, default=True)
+    avviso: Mapped[bool] = mapped_column(Boolean, default=False)
+    creato_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (UniqueConstraint("termine", name="parola_chiave_unica"),)
+
+
+class Avviso(Base):
+    __tablename__ = "avviso"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    tipo: Mapped[str] = mapped_column(String(40))
+    titolo: Mapped[str] = mapped_column(String(300))
+    testo: Mapped[str] = mapped_column(Text, default="")
+    sito_id: Mapped[int | None] = mapped_column(ForeignKey("sito.id", ondelete="CASCADE"))
+    elemento_grezzo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("elemento_grezzo.id", ondelete="CASCADE")
+    )
+    canale_id: Mapped[int | None] = mapped_column(ForeignKey("canale.id", ondelete="SET NULL"))
+    letto: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    letto_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow, index=True)

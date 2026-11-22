@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, normalize
+from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, normalize, readable_home
 from extractors.entities import extract
 
 NOME = "titolo_operare"
@@ -40,6 +40,8 @@ def _ind(code: str, value: str, certainty: float, ev: dict | None = None) -> Ind
 def collect(pages: list[Page]) -> list[Indicator]:
     out: list[Indicator] = []
     readable = [p for p in pages if p.readable]
+    home = readable_home(pages)
+    home = readable_home(pages)
     logo = None
     for p in pages:
         if p.status != "riuscito":
@@ -52,17 +54,17 @@ def collect(pages: list[Page]) -> list[Indicator]:
             break
     if logo:
         out.append(_ind("logo_adm_esposto", PRESENTE, 0.7, evidence(*logo)))
-    elif readable:
+    elif home:
         out.append(
             _ind(
                 "logo_adm_esposto",
                 ASSENTE,
                 0.5,
-                evidence(readable[0], "Nessuna immagine con il marchio ADM/AAMS"),
+                evidence(home, "Nessuna immagine con il marchio ADM/AAMS"),
             )
         )
     else:
-        out.append(_ind("logo_adm_esposto", ND, 0.0, {"motivo": "Nessuna pagina leggibile"}))
+        out.append(_ind("logo_adm_esposto", ND, 0.0, {"motivo": "Pagina principale non letta"}))
 
     number = None
     for p in readable:
@@ -81,17 +83,17 @@ def collect(pages: list[Page]) -> list[Indicator]:
                 evidence(number[0], number[1], numero=number[2]),
             )
         )
-    elif readable:
+    elif home:
         out.append(
             _ind(
                 "numero_concessione_dichiarato",
                 ASSENTE,
                 0.5,
-                evidence(readable[0], "Nessun numero di concessione nel testo letto"),
+                evidence(home, "Nessun numero di concessione nel testo letto"),
             )
         )
     else:
-        out.append(_ind("numero_concessione_dichiarato", ND, 0.0, {"motivo": "Nessuna pagina leggibile"}))
+        out.append(_ind("numero_concessione_dichiarato", ND, 0.0, {"motivo": "Pagina principale non letta"}))
 
     licences: dict[str, str] = {}
     first_page = None
@@ -116,15 +118,15 @@ def collect(pages: list[Page]) -> list[Indicator]:
                 evidence(first_page, licences[name], licenze=sorted(licences)),
             )
         )
-    elif readable:
+    elif home:
         out.append(
             _ind(
                 "licenza_estera_dichiarata",
                 ASSENTE,
                 0.4,
-                evidence(readable[0], "Nessuna licenza estera citata nel testo letto"),
+                evidence(home, "Nessuna licenza estera citata nel testo letto"),
             )
         )
     else:
-        out.append(_ind("licenza_estera_dichiarata", ND, 0.0, {"motivo": "Nessuna pagina leggibile"}))
+        out.append(_ind("licenza_estera_dichiarata", ND, 0.0, {"motivo": "Pagina principale non letta"}))
     return out

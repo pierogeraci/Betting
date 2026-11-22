@@ -1,3 +1,9 @@
+# DEROGA AL VINCOLO 7, SOLO PER LE SESSIONI CLOUD: il contenitore di raccolta usa la rete
+# dell'host perché il proxy della sessione ascolta su 127.0.0.1 e non è raggiungibile da una
+# rete Docker. Su questa rete il contenitore vede le porte locali dell'host: la difesa resta
+# la guardia sugli indirizzi (probes/snapshot/guard.py) più il controllo dei reindirizzamenti.
+# Non usarlo fuori dalla sessione cloud.
+#
 # Aggiunta per le sessioni cloud di Claude Code, dove la rete passa da un proxy che
 # sostituisce i certificati. Non serve su una macchina normale.
 #   BUILDX_BAKE_ENTITLEMENTS_FS=0 docker compose -f compose.yaml -f compose.sessione.yaml ...

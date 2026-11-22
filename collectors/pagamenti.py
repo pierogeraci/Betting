@@ -16,8 +16,44 @@ def _ind(code: str, value: str, certainty: float, ev: dict | None = None) -> Ind
     return Indicator(code, value, certainty, NOME, VERSIONE, ev or {}, AREA)
 
 
+METHODS_LIST = [
+    "visa",
+    "mastercard",
+    "maestro",
+    "carta di credito",
+    "credit card",
+    "bonifico",
+    "bank transfer",
+    "paypal",
+    "skrill",
+    "neteller",
+    "bitcoin",
+    "apple pay",
+    "google pay",
+    "postepay",
+    "paysafecard",
+]
+DEPOSIT_TERMS = ["deposito", "deposit", "prelievo", "withdraw", "ricarica", "top up", "versamento"]
+
+
 def _payment_page_read(pages: list[Page]) -> Page | None:
-    return next((p for p in pages if p.readable and page_kind(p) == "pagamenti"), None)
+    """La pagina dei metodi di pagamento letta per davvero.
+
+    Deve essere una pagina secondaria (arrivata da un link "pagamenti" della home),
+    parlare di depositi o prelievi, elencare almeno due metodi e non essere un modulo
+    di accesso. Altrimenti l'assenza di un metodo non si può affermare.
+    """
+    for p in pages:
+        if not (p.readable and p.secondary and page_kind(p) == "pagamenti"):
+            continue
+        if any("password" in (t + n).lower() for f in p.parsed.forms for t, n in f["inputs"]):
+            continue
+        if not find_terms(p, DEPOSIT_TERMS):
+            continue
+        listed = sum(1 for m in METHODS_LIST if find_terms(p, [m]))
+        if listed >= 2:
+            return p
+    return None
 
 
 def collect(pages: list[Page]) -> list[Indicator]:

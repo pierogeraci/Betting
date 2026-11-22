@@ -42,10 +42,24 @@ def _network(client: CollectClient, job: CollectJob) -> dict[str, Any]:
     return run_job(client, job)
 
 
+def _telegram(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from probes.telegram.probe import run_job
+
+    return run_job(client, job)
+
+
+def _crawl(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from probes.web.probe import run_job
+
+    return run_job(client, job)
+
+
 # Sonda → tipi di lavoro che esegue.
 PROBES: dict[str, dict[str, JobRunner]] = {
     "snapshot": {"snapshot": _snapshot, "rete": _network},
     "adm": {"scarica_adm": _adm},
+    "telegram": {"telegram": _telegram},
+    "web": {"crawl": _crawl},
 }
 
 

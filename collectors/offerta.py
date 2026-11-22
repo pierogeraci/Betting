@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 import yaml
 
 from collectors import terms
-from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, normalize
+from collectors.base import ASSENTE, ND, PRESENTE, Indicator, Page, evidence, normalize, readable_home
 from core.domains import registrable_domain
 
 NOME = "offerta"
@@ -74,6 +74,7 @@ def collect(pages: list[Page]) -> list[Indicator]:
         ]
         return [_ind(c, ND, 0.0, {"motivo": "Nessuna pagina leggibile"}) for c in codes]
     out: list[Indicator] = []
+    home = readable_home(pages)
     games = game_types(readable)
     if games:
         first = next(iter(games.values()))
@@ -90,15 +91,17 @@ def collect(pages: list[Page]) -> list[Indicator]:
                 },
             )
         )
-    else:
+    elif home:
         out.append(
             _ind(
                 "tipi_gioco",
                 ASSENTE,
                 0.5,
-                evidence(readable[0], "Nessun tipo di gioco riconosciuto nel testo letto"),
+                evidence(home, "Nessun tipo di gioco riconosciuto nella pagina principale"),
             )
         )
+    else:
+        out.append(_ind("tipi_gioco", ND, 0.0, {"motivo": "Pagina principale non letta"}))
 
     odds_page, odds = None, []
     for p in readable:
@@ -147,8 +150,10 @@ def collect(pages: list[Page]) -> list[Indicator]:
         )
 
     images = set()
+    any_image = False
     for p in pages:
         for src, _ in p.parsed.images:
+            any_image = any_image or bool(src)
             host = (urlsplit(p.absolute(src)).hostname or "").lower()
             if host and registrable_domain(host) != base:
                 label = next(
@@ -168,15 +173,17 @@ def collect(pages: list[Page]) -> list[Indicator]:
                 ),
             )
         )
-    else:
+    elif home and any_image:
         out.append(
             _ind(
                 "immagini_esterne",
                 ASSENTE,
                 0.5,
-                evidence(readable[0], "Tutte le immagini sono servite dal dominio del sito"),
+                evidence(home, "Tutte le immagini sono servite dal dominio del sito"),
             )
         )
+    else:
+        out.append(_ind("immagini_esterne", ND, 0.0, {"motivo": "Nessuna immagine nelle pagine lette"}))
 
     rapid = []
     for p in pages:
@@ -220,8 +227,8 @@ def collect(pages: list[Page]) -> list[Indicator]:
             break
     if italian:
         out.append(_ind("lingua_italiana", PRESENTE, 0.8, evidence(*italian)))
+    elif home:
+        out.append(_ind("lingua_italiana", ASSENTE, 0.6, evidence(home, "Pagina principale non in italiano")))
     else:
-        out.append(
-            _ind("lingua_italiana", ASSENTE, 0.6, evidence(readable[0], "Pagine lette non in italiano"))
-        )
+        out.append(_ind("lingua_italiana", ND, 0.0, {"motivo": "Pagina principale non letta"}))
     return out
