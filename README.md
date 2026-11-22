@@ -11,7 +11,12 @@ make up               # database, archivio, portale, lavoratore, raccolta
 make create-user UTENTE=nome RUOLO=amministratore
 ```
 
-Il portale risponde su http://127.0.0.1:8000.
+Il portale risponde su http://127.0.0.1:8000. Sezioni: cruscotto, siti (profilazione, Trust Index,
+puntate, gemelli, legal entity, grafo, snapshot, report), revisione manuale, sonde, canali Telegram,
+parole chiave, avvisi, ricerca nei contenuti, etichettatura, argomenti, emoji, valutazione, app Android,
+registri pubblici, eventi sportivi, anomalie sui conti (dati sintetici), elenchi ADM, archivio, lavori, utenti.
+
+Lo stato di ogni fase e le verifiche su dati reali ancora da fare sono in `docs/avanzamento.md`.
 
 ## Prove
 

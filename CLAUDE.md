@@ -23,6 +23,7 @@ Ogni modulo legge uno stadio e scrive il successivo. Nessun modulo ne chiama un 
 | `collectors/` | Collettori di profilazione del sito, uno per area |
 | `scoring/` | Vulnerabilità, minaccia, Trust Index |
 | `console/` | Portale web per l'analista (FastAPI, Jinja2, HTMX): tutto ciò che il sistema fa si usa da qui |
+| `docs/avanzamento.md` | Stato di ogni fase e verifiche su dati reali ancora da fare |
 | `config/trust_index.yaml` | Pesi, soglie e matrice, con campo `version` |
 | `tests/fixtures/` | Pagine, messaggi e file di esempio per i test |
 
@@ -36,15 +37,20 @@ Non aggiungere dipendenze fuori da questo elenco senza chiedere.
 
 - `make setup`: ambiente Python locale (`.venv`) per test e lint
 - `make env`: crea `.env` con segreti casuali, se non esiste
-- `make up` / `make down`: avvia o ferma database, archivio, portale, lavoratore e raccolta
+- `make up` / `make down`: avvia o ferma database, archivio, portale e lavoratore (nessuna raccolta)
+- `make up-raccolta`: solo in esercizio, avvia i contenitori di raccolta continua (snapshot, Telegram, Tor, estrazione)
+- `make up-app`: analisi statica degli APK (MobSF su rete interna senza Internet)
+- `make apk-dinamica`: una analisi dinamica di APK in coda; emulatore usa e getta, serve KVM
+- `make modelli`: scarica una volta i modelli di OCR e trascrizione
 - `make init`: migrazioni, password del ruolo `raccolta`, secchi dell'archivio
 - `make create-user UTENTE=<nome> RUOLO=analista|amministratore`: account del portale
 - `make test`: test unitari, solo su fixture, senza rete; serve `docker compose up -d db`
 - `make lint`: `ruff check` e `ruff format --check`
-- `make collect SONDA=<nome> LIMITE=<n>`: esegue una sonda su dati reali nel suo contenitore, fermandosi al limite indicato. Sonde: `snapshot`, `adm`
+- `make collect SONDA=<nome> LIMITE=<n>`: prova su dati reali nel contenitore della sonda. Sonde: `snapshot`, `adm`, `rete` (LIMITE = lavori), `telegram` (LIMITE = canali), `web`, `tor` (LIMITE = pagine)
 - `make test-integration`: prove su dati reali; legge `PROVA_URLS` da `.env` (al massimo tre URL)
-- `make telegram-login`: primo accesso dell'account Telegram; lo esegue l'utente (arriva con la Fase 2)
-- `make eval`: valutazione sul set etichettato (arriva con la Fase 3)
+- `make telegram-login`: primo accesso dell'account Telegram; lo esegue l'utente
+- `make eval`: valutazione sul set etichettato dall'analista (`AMBITO=entita|classificatore`); `make eval-gold` sugli esempi sintetici
+- `make anomalie`: anomalie sui conti, dati sintetici
 - Nelle sessioni cloud dietro proxy: aggiungere `COMPOSE_EXTRA="-f compose.sessione.yaml"` ai comandi `make`
 
 ## Vincoli non negoziabili
@@ -69,7 +75,9 @@ Se un compito richiede di violare uno di questi punti, fermati e chiedi.
 - Legalità: si decide per confronto con gli elenchi ADM (concessionari, siti inibiti) caricati in tabelle dedicate. Non si deduce dal testo del sito.
 - Trust Index: segue la matrice del dossier v0.5. Vulnerabilità = somma dei pesi delle sette voci presenti; minaccia = tre variabili sulle puntate nelle 24 ore (puntata media, vincite totali, % vincite); indice = (vulnerabilità + minaccia) / 2. Pesi e soglie stanno solo in `config/trust_index.yaml`. Ogni punteggio registra la versione usata e la copertura. Senza dati di puntata la minaccia è non determinabile e non si emette alcun indice: si mostra la sola vulnerabilità.
 - Confine di raccolta: i contenitori di raccolta vedono il database solo con il ruolo `raccolta` (funzioni `lavoro_prendi` e `lavoro_chiudi`) e scrivono solo nel secchio di arrivo. Un processo interno ricalcola gli hash e scrive le tabelle.
-- Tabelle: `sonda`, `elemento_grezzo`, `media`, `estrazione`, `entita`, `sito`, `snapshot`, `indicatore`, `punteggio`, `revisione`; di servizio `lavoro`, `utente`, `adm_caricamento`, `adm_concessionario`, `adm_sito_inibito`.
+- Tabelle: `sonda`, `elemento_grezzo`, `media`, `estrazione`, `entita`, `sito`, `snapshot`, `indicatore`, `punteggio`, `revisione`; di servizio `lavoro`, `utente`, `adm_caricamento`, `adm_concessionario`, `adm_sito_inibito`, `puntata`, `legame_sito`, `canale`, `parola_chiave`, `avviso`, `etichetta`, `emoji`, `valutazione`, `modello`, `registro_voce`, `legal_entity`, `evento_sportivo`, `quota_evento`.
+- Addestramento: nessun modello (classificatore, LDA) usa contenuti Telegram, anche se arrivati per altre vie (riferimento `t.me`, provenienza dichiarata al caricamento). I dati Telegram servono solo a misurare.
+- Estrazione e APK: leggono solo il secchio di lavorazione e scrivono solo in quello di arrivo; l'emulatore esce solo da mitmproxy, che blocca gli invii di dati.
 
 ## Fasi
 

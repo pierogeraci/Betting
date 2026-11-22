@@ -16,7 +16,7 @@
 {% if "adm_senza_titolo" in d.segnalazioni %}<div class="messaggio errore">Segnalazione immediata: il sito espone logo o numero di concessione ADM ma non è nell'elenco dei concessionari.</div>{% endif %}
 {% if punteggi|length > 1 %}<div class="pastiglie">{% for ambito, p in punteggi.items() %}<span class="pastiglia">{{ "Piattaforma" if ambito == "piattaforma" else ambito.replace("gioco:", "") }}: {{ p.classe_rischio or "senza indice" }}</span>{% endfor %}</div>{% endif %}
 
-<div class="griglia c2">
+<div class="pila">
 <section class="scheda"><header><h2>1 · Calcolo della vulnerabilità</h2><span class="aiuto">Somma dei pesi delle voci presenti</span></header>
   <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Voce</th><th class="num">Peso</th><th>Rilevata</th><th class="num">Punti</th></tr></thead><tbody>
   {% for v in d.vulnerabilita.voci %}<tr><td>{{ v.nome }}{% if v.evidenza.estratto %}<span class="secondario taglia" title="{{ v.evidenza.estratto }}">{{ v.evidenza.estratto }}</span>{% elif v.evidenza.motivo %}<span class="secondario">{{ v.evidenza.motivo }}</span>{% endif %}</td>

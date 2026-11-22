@@ -60,6 +60,11 @@ async def http_error(request: Request, exc: HTTPException) -> Response:
     )
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon() -> RedirectResponse:
+    return RedirectResponse("/static/favicon.svg", status_code=301)
+
+
 @app.get("/salute")
 def health() -> JSONResponse:
     return JSONResponse({"stato": "ok"})
