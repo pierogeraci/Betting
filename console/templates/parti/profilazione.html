@@ -1,0 +1,23 @@
+{% from "parti/macro.html" import stato %}
+{% if gruppi %}
+<div class="messaggio info">"Non determinabile" non vale "assente": un dato che non si riesce a leggere non abbassa il rischio. Si osservano solo pagine pubbliche, senza accesso né moduli.</div>
+<div class="griglia c2">
+{% for area, indicatori in gruppi.items() %}
+  <section class="scheda"><header><h2>{{ area }}</h2>
+    <span class="aiuto">{{ indicatori|selectattr("valore", "equalto", "presente")|list|length }} presenti su {{ indicatori|length }}</span></header>
+    <div class="corpo pila">
+    {% for i in indicatori %}
+      <div class="evidenza">
+        <div class="riga tra"><strong>{{ NOMI_INDICATORI.get(i.codice, i.codice) }}</strong>{{ stato(i.valore) }}</div>
+        {% if i.codice == "tipi_gioco" and i.evidenza.tipi %}
+          <div class="tabella-contenitore"><table><thead><tr><th>Gioco</th><th>Struttura</th><th>Rischio</th><th>Soggetti</th><th>Disciplina</th></tr></thead><tbody>
+          {% for codice, g in i.evidenza.tipi.items() %}<tr><td>{{ g.nome }}<span class="secondario">«{{ g.termine }}»</span></td><td>{{ g.criteri.struttura }}</td><td>{{ g.criteri.natura_rischio }}</td><td>{{ g.criteri.soggetti }}</td><td>{{ g.criteri.disciplina }}</td></tr>{% endfor %}
+          </tbody></table></div>
+          <p class="dettagli">certezza {{ "%.0f"|format(i.certezza * 100) }}% · {{ i.collettore }} v{{ i.versione_collettore }}</p>
+        {% else %}{% include "parti/evidenza.html" %}{% endif %}
+      </div>
+    {% endfor %}
+    </div></section>
+{% endfor %}
+</div>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Profilazione non ancora eseguita</h3><p>Parte da sola dopo il primo snapshot riuscito.</p></div></div>{% endif %}

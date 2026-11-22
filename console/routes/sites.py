@@ -20,7 +20,18 @@ from core.storage import read_archive
 
 router = APIRouter()
 SOURCE_LIMIT = 400_000
-SCHEDE = ("panoramica", "snapshot", "traffico", "sorgente", "origine", "lavori")
+SCHEDE = (
+    "panoramica",
+    "profilazione",
+    "trust",
+    "puntate",
+    "gemelli",
+    "snapshot",
+    "traffico",
+    "sorgente",
+    "origine",
+    "lavori",
+)
 
 
 @router.get("/siti")
@@ -28,6 +39,8 @@ def sites(
     request: Request,
     q: str = "",
     esito: str = "",
+    classe: str = "",
+    gruppo: int | None = None,
     pagina: int = 1,
     user: Utente = Depends(current_user),
     db: Session = Depends(get_db),
@@ -37,6 +50,31 @@ def sites(
         conditions.append(Sito.dominio.ilike(f"%{q.strip().lower().replace('%', '')}%"))
     if esito in ESITI_ADM:
         conditions.append(Sito.esito_adm == esito)
+    if gruppo:
+        conditions.append(Sito.gruppo == gruppo)
+    if classe in {"basso", "medio", "alto", "nessun_indice"}:
+        from core.models import Punteggio
+
+        last_scores = (
+            select(
+                Punteggio.sito_id,
+                Punteggio.classe_rischio,
+                func.row_number()
+                .over(
+                    partition_by=Punteggio.sito_id,
+                    order_by=(Punteggio.calcolato_il.desc(), Punteggio.id.desc()),
+                )
+                .label("n"),
+            )
+            .where(Punteggio.ambito == "piattaforma")
+            .subquery()
+        )
+        cond = (
+            last_scores.c.classe_rischio.is_(None)
+            if classe == "nessun_indice"
+            else last_scores.c.classe_rischio == classe
+        )
+        conditions.append(Sito.id.in_(select(last_scores.c.sito_id).where(last_scores.c.n == 1, cond)))
     page = Page(pagina, db.execute(select(func.count()).select_from(Sito).where(*conditions)).scalar() or 0)
     rows = (
         db.execute(
@@ -55,6 +93,9 @@ def sites(
             select(Snapshot).where(Snapshot.sito_id.in_([s.id for s in rows])).order_by(Snapshot.raccolto_il)
         ).scalars():
             latest[snap.sito_id] = snap
+    from console.routes.profile import latest_scores
+
+    scores = {s.id: latest_scores(db, s.id).get("piattaforma") for s in rows}
     name = "parti/siti_tabella.html" if request.headers.get("HX-Request") else "siti.html"
     return render(
         request,
@@ -64,9 +105,12 @@ def sites(
             "revisioni": open_reviews(db),
             "righe": rows,
             "ultimi": latest,
+            "punteggi": scores,
             "pag": page,
             "q": q,
             "esito": esito,
+            "classe": classe,
+            "gruppo": gruppo,
         },
     )
 
@@ -160,6 +204,42 @@ def site_detail(
         "attivi": _active_jobs(db, site.id),
         "indicatori": _latest_indicators(db, site.id),
     }
+    from console.routes import profile
+
+    context |= profile.site_context(db, site)
+    if scheda == "profilazione":
+        context["gruppi"] = profile.grouped_indicators(db, site.id)
+    elif scheda == "puntate":
+        from core.models import Puntata
+
+        context["lista_puntate"] = (
+            db.execute(
+                select(Puntata)
+                .where(Puntata.sito_id == site.id)
+                .order_by(Puntata.momento.desc().nullslast(), Puntata.id.desc())
+                .limit(200)
+            )
+            .scalars()
+            .all()
+        )
+        context["conteggio_puntate"] = dict(
+            db.execute(
+                select(Puntata.fonte, func.count()).where(Puntata.sito_id == site.id).group_by(Puntata.fonte)
+            ).all()
+        )
+    elif scheda == "trust":
+        from core.models import Punteggio
+
+        context["storico"] = (
+            db.execute(
+                select(Punteggio)
+                .where(Punteggio.sito_id == site.id, Punteggio.ambito == "piattaforma")
+                .order_by(Punteggio.calcolato_il.desc())
+                .limit(20)
+            )
+            .scalars()
+            .all()
+        )
     if scheda == "traffico" and chosen and chosen.traffico_chiave:
         context["traffico"] = parse_har(read_archive(chosen.traffico_chiave), site.dominio)
     elif scheda == "sorgente" and chosen and chosen.html_chiave:

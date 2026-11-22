@@ -211,3 +211,6 @@ svg.ripartizione .ok { fill: var(--ok); } svg.ripartizione .danger { fill: var(-
 svg.ripartizione .neutral { fill: var(--testo-3); } svg.ripartizione .warn { fill: var(--avviso); }
 svg.ripartizione .fondo { fill: var(--superficie-2); }
 .riga > input[type=search], .riga > input[type=text], .riga > input[type=password] { flex: 1; min-width: 180px; width: auto; }
+.dettagli a { font-weight: 560; }
+.evidenza table { font-size: .84rem; }
+.evidenza th, .evidenza td { padding: 6px 8px; }

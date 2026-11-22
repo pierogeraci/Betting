@@ -36,9 +36,15 @@ def _adm(client: CollectClient, job: CollectJob) -> dict[str, Any]:
     return run_job(client, job)
 
 
+def _network(client: CollectClient, job: CollectJob) -> dict[str, Any]:
+    from probes.rete.collector import run_job
+
+    return run_job(client, job)
+
+
 # Sonda → tipi di lavoro che esegue.
 PROBES: dict[str, dict[str, JobRunner]] = {
-    "snapshot": {"snapshot": _snapshot},
+    "snapshot": {"snapshot": _snapshot, "rete": _network},
     "adm": {"scarica_adm": _adm},
 }
 

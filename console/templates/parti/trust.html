@@ -1,0 +1,62 @@
+{% from "parti/macro.html" import stato, csrf_campo %}
+{% set d = punteggio.dettaglio if punteggio else None %}
+{% if not regole.pesi_validati %}<div class="messaggio avviso">Pesi e soglie sono quelli del foglio v0.5, fissati a giudizio e non ancora validati sul campione dell'analista.</div>{% endif %}
+{% if d %}
+<div class="griglia c4">
+  <div class="scheda numero"><span class="etichetta">Vulnerabilità</span><span class="valore">{{ "%.1f"|format(d.vulnerabilita.punteggio)|replace(".", ",") }}</span>
+    <span class="nota">{{ "Livello " ~ d.vulnerabilita.livello if d.vulnerabilita.livello else "Livello incerto" }}{% if d.vulnerabilita.punteggio_massimo != d.vulnerabilita.punteggio %} · fino a {{ "%.1f"|format(d.vulnerabilita.punteggio_massimo)|replace(".", ",") }}{% endif %}</span></div>
+  <div class="scheda numero"><span class="etichetta">Minaccia</span><span class="valore">{{ "%.0f"|format(d.minaccia.punteggio) if d.minaccia.punteggio is not none else "—" }}</span>
+    <span class="nota">{{ "Livello " ~ d.minaccia.livello if d.minaccia.livello else "Non determinabile" }}</span></div>
+  <div class="scheda numero"><span class="etichetta">Trust Index</span><span class="valore">{{ ("%.2f"|format(d.trust_index))|replace(".", ",") if d.trust_index is not none else "—" }}</span>
+    <span class="nota">{{ "Rischio " ~ d.classe if d.classe else "Nessun indice" }}</span></div>
+  <div class="scheda numero"><span class="etichetta">Copertura</span><span class="valore">{{ "%.0f"|format(d.vulnerabilita.copertura * 100) }}%</span>
+    <span class="nota">Voci determinate · regole {{ d.versione }}</span></div>
+</div>
+{% if d.esclusione %}<div class="messaggio {{ 'ok' if d.esclusione.startswith('Concessionario') else 'info' }}">{{ d.esclusione }}</div>{% endif %}
+{% if "adm_senza_titolo" in d.segnalazioni %}<div class="messaggio errore">Segnalazione immediata: il sito espone logo o numero di concessione ADM ma non è nell'elenco dei concessionari.</div>{% endif %}
+{% if punteggi|length > 1 %}<div class="pastiglie">{% for ambito, p in punteggi.items() %}<span class="pastiglia">{{ "Piattaforma" if ambito == "piattaforma" else ambito.replace("gioco:", "") }}: {{ p.classe_rischio or "senza indice" }}</span>{% endfor %}</div>{% endif %}
+
+<div class="griglia c2">
+<section class="scheda"><header><h2>1 · Calcolo della vulnerabilità</h2><span class="aiuto">Somma dei pesi delle voci presenti</span></header>
+  <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Voce</th><th class="num">Peso</th><th>Rilevata</th><th class="num">Punti</th></tr></thead><tbody>
+  {% for v in d.vulnerabilita.voci %}<tr><td>{{ v.nome }}{% if v.evidenza.estratto %}<span class="secondario taglia" title="{{ v.evidenza.estratto }}">{{ v.evidenza.estratto }}</span>{% elif v.evidenza.motivo %}<span class="secondario">{{ v.evidenza.motivo }}</span>{% endif %}</td>
+    <td class="num">{{ ("%g"|format(v.peso))|replace(".", ",") }}</td><td>{{ stato(v.valore) }}</td>
+    <td class="num">{{ ("%g"|format(v.peso))|replace(".", ",") if v.valore == "presente" else "0" if v.valore == "assente" else "?" }}</td></tr>{% endfor %}
+  <tr><td><strong>Totale</strong></td><td></td><td></td><td class="num"><strong>{{ ("%g"|format(d.vulnerabilita.punteggio))|replace(".", ",") }}</strong></td></tr>
+  </tbody></table></div>
+  <div class="corpo"><p class="aiuto">Livelli: basso sotto 6, medio da 6 a meno di 12, alto da 12.</p></div></section>
+
+<section class="scheda"><header><h2>2 · Calcolo della minaccia</h2><span class="aiuto">Puntate nelle {{ regole.minaccia.finestra_ore }} ore</span></header>
+  {% if d.minaccia.raffinamento %}
+  <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Raffinamento dei dati</th><th class="num">Valore</th></tr></thead><tbody>
+    <tr><td>Numero di puntate</td><td class="num">{{ d.minaccia.raffinamento.numero_puntate }}</td></tr>
+    <tr><td>Totale scommesso</td><td class="num">{{ d.minaccia.raffinamento.totale_scommesso }} €</td></tr>
+    <tr><td>Numero di vittorie</td><td class="num">{{ d.minaccia.raffinamento.numero_vittorie }}</td></tr>
+    <tr><td>Totale vinto</td><td class="num">{{ d.minaccia.raffinamento.totale_vinto }} €</td></tr>
+    <tr><td>% vincite</td><td class="num">{{ "%.0f"|format(d.minaccia.raffinamento.percentuale_vincite * 100) }}%</td></tr>
+  </tbody></table>
+  <table><thead><tr><th>Variabile</th><th class="num">Valore</th><th>Soglie</th><th>Voto</th></tr></thead><tbody>
+    {% for v in d.minaccia.variabili %}<tr><td>{{ v.nome }}<span class="secondario">{{ v.formula }}</span></td><td class="num">{{ v.valore }}</td><td class="mono">{{ v.soglie|join(" · ") }}</td><td>{{ v.voto }} · {{ v.livello }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  <div class="corpo"><p class="aiuto">Minaccia = media dei voti arrotondata per eccesso × 3. {{ d.minaccia.puntate_usate }} puntate usate su {{ d.minaccia.puntate_totali }}{% if d.minaccia.escluse_valuta %}, {{ d.minaccia.escluse_valuta }} escluse per valuta senza tasso{% endif %}.</p></div>
+  {% else %}<div class="corpo"><div class="messaggio info">{{ d.minaccia.motivo }}</div>
+    <p class="aiuto">Le puntate arrivano dai riquadri pubblici del sito o da un file caricato nella scheda Puntate.</p></div>{% endif %}
+</section>
+</div>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Nessun punteggio ancora</h3><p>Il punteggio si calcola dopo la profilazione.</p></div></div>{% endif %}
+
+<div class="griglia c2">
+<section class="scheda"><header><h2>Giudizio dell'analista</h2>{% if giudizio %}<span class="etichetta-stato info">{{ CLASSI_ANALISTA.get(giudizio.esito) }}</span>{% endif %}</header>
+  <form class="corpo" method="post" action="/siti/{{ sito.id }}/giudizio">{{ csrf_campo(csrf) }}
+    {% if giudizio %}<p class="aiuto campo">Ultimo giudizio del {{ giudizio.creata_il|quando }}: «{{ giudizio.note }}»</p>{% endif %}
+    <div class="campo"><label for="classe">Classe secondo l'analista</label><select id="classe" name="classe" required><option value="">Scegli…</option>
+      {% for k, n in CLASSI_ANALISTA.items() %}<option value="{{ k }}">{{ n }}</option>{% endfor %}</select></div>
+    <div class="campo"><label for="motivazione">Motivazione</label><textarea id="motivazione" name="note" required placeholder="Cosa hai verificato e perché"></textarea></div>
+    <button class="bottone primario" type="submit">Registra il giudizio</button>
+    <p class="aiuto">Il giudizio entra nel campione di validazione e non modifica il punteggio.</p>
+  </form></section>
+<section class="scheda"><header><h2>Storico dei punteggi</h2></header>
+  {% if storico %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Calcolato il</th><th>Regole</th><th class="num">V</th><th class="num">M</th><th>Classe</th></tr></thead><tbody>
+  {% for p in storico %}<tr><td>{{ p.calcolato_il|quando }}</td><td class="mono">{{ p.versione_regole }}</td><td class="num">{{ p.vulnerabilita }}</td><td class="num">{{ p.minaccia if p.minaccia is not none else "—" }}</td><td>{{ p.classe_rischio or "—" }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><p>Nessun punteggio.</p></div>{% endif %}</section>
+</div>

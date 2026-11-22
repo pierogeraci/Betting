@@ -20,7 +20,12 @@ from core.models import Lavoro, Revisione, Sito, Snapshot, utcnow
 from core.storage import archive_bytes, get_store, sha256_hex
 
 MAX_MANIFEST = 2_000_000
-FILES = {"html": "text/html", "schermata": "image/png", "traffico": "application/json"}
+FILES = {
+    "html": "text/html",
+    "schermata": "image/png",
+    "traffico": "application/json",
+    "icona": "application/octet-stream",
+}
 STATES = {"riuscito", "bloccato", "errore"}
 
 
@@ -153,6 +158,9 @@ def ingest_snapshot(session: Session, origin: Lavoro) -> Snapshot:
             "richieste_bloccate": manifest.get("richieste_bloccate")
             if isinstance(manifest.get("richieste_bloccate"), int)
             else 0,
+            "secondaria": bool(origin.carico.get("secondaria")),
+            "icona_sha256": stored["icona"][0] if stored["icona"] else None,
+            "icona_chiave": stored["icona"][1] if stored["icona"] else None,
         },
     )
     session.add(snapshot)
@@ -167,10 +175,76 @@ def ingest_snapshot(session: Session, origin: Lavoro) -> Snapshot:
                 motivo=f"{snapshot.motivo or 'blocco'}: la pagina non è stata letta. Nessun tentativo di aggiramento.",
             )
         )
-    adm.compare_site(session, site, snapshot.id)
+    if not origin.carico.get("secondaria"):
+        adm.compare_site(session, site, snapshot.id)
     session.flush()
+    from core import profiling
+
+    profiling.request_secondary_pages(session, site, snapshot, origin.creato_da)
+    profiling.request_network(session, site, origin.creato_da)
+    profiling.request_profile(session, site, origin.creato_da)
     _cleanup(origin.id, manifest)
     return snapshot
+
+
+def ingest_network(session: Session, origin: Lavoro) -> dict[str, Any]:
+    """Dati DNS, di registrazione e del certificato raccolti dal contenitore di raccolta."""
+    manifest = _read_manifest(origin.id)
+    domain = str(origin.carico.get("dominio", ""))[:255]
+    data = manifest.get("rete") if isinstance(manifest.get("rete"), dict) else {}
+    clean: dict[str, Any] = {}
+    for key in ("ip", "ipv6", "ns", "mx"):
+        if isinstance(data.get(key), list):
+            clean[key] = [str(v)[:255] for v in data[key][:20]]
+    for key in ("registrar", "creato_il", "scade_il", "aggiornato_il", "registrante_paese", "privacy"):
+        if data.get(key) is not None:
+            clean[key] = str(data[key])[:255]
+    cert = data.get("certificato")
+    if isinstance(cert, dict) and not manifest.get("rete_intercettata"):
+        clean["certificato"] = {
+            k: str(cert[k])[:1000]
+            for k in (
+                "valido",
+                "errore_verifica",
+                "emittente",
+                "soggetto",
+                "valido_dal",
+                "valido_al",
+                "impronta_sha256",
+                "nomi",
+            )
+            if k in cert
+        }
+    clean["errori"] = [str(e)[:200] for e in (manifest.get("errori") or [])[:10]]
+    clean["rete_intercettata"] = bool(manifest.get("rete_intercettata"))
+    content = json.dumps(clean, sort_keys=True)
+    digest = sha256_hex((domain + content).encode())
+    from sqlalchemy import select
+
+    from core.models import ElementoGrezzo
+
+    exists = session.execute(
+        select(ElementoGrezzo.id).where(ElementoGrezzo.fonte == "rete", ElementoGrezzo.sha256 == digest)
+    ).first()
+    if not exists:
+        session.add(
+            ElementoGrezzo(
+                fonte="rete",
+                tipo="rete",
+                riferimento=domain,
+                contenuto=content,
+                sha256=digest,
+                raccolto_il=utcnow(),
+                metadati={"lavoro": origin.id},
+            )
+        )
+    site = session.get(Sito, origin.sito_id) if origin.sito_id else None
+    if site is not None:
+        from core import profiling
+
+        profiling.request_profile(session, site, origin.creato_da)
+    _cleanup(origin.id, manifest)
+    return {"dominio": domain, "ip": clean.get("ip", [])}
 
 
 def ingest_adm(session: Session, origin: Lavoro) -> dict[str, Any]:

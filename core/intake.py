@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from core import queue
-from core.domains import NormalizedUrl, normalize_url
+from core.domains import NormalizedUrl, normalize_url  # noqa: F401 - riesportata
 from core.models import ElementoGrezzo, Entita, Lavoro, LegameEntita, Media, MenzioneEntita, Sito, Sonda
 from core.storage import archive_bytes, sha256_hex
 
@@ -71,21 +71,24 @@ def register_url(session: Session, element: ElementoGrezzo, url: NormalizedUrl) 
     return get_or_create_site(session, url.registrable)
 
 
-def request_snapshot(session: Session, site: Sito, url: str, user_id: int | None = None) -> Lavoro:
-    """Mette in coda lo snapshot di una sola pagina e il confronto con gli elenchi ADM."""
-    queue.enqueue(
-        session,
-        queue=queue.INTERNAL,
-        kind="confronto_adm",
-        payload={"sito_id": site.id},
-        site_id=site.id,
-        user_id=user_id,
-    )
+def request_snapshot(
+    session: Session, site: Sito, url: str, user_id: int | None = None, secondary: bool = False
+) -> Lavoro:
+    """Mette in coda lo snapshot di una sola pagina; per la pagina principale anche il confronto ADM."""
+    if not secondary:
+        queue.enqueue(
+            session,
+            queue=queue.INTERNAL,
+            kind="confronto_adm",
+            payload={"sito_id": site.id},
+            site_id=site.id,
+            user_id=user_id,
+        )
     return queue.enqueue(
         session,
         queue=queue.COLLECT,
         kind="snapshot",
-        payload={"url": url, "sito_id": site.id},
+        payload={"url": url, "sito_id": site.id, "secondaria": secondary},
         next_kind="acquisisci_snapshot",
         site_id=site.id,
         user_id=user_id,

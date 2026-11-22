@@ -349,3 +349,37 @@ class AdmSitoInibito(Base):
         Index("adm_inib_dominio", "caricamento_id", "dominio"),
         Index("adm_inib_registrabile", "caricamento_id", "dominio_registrabile"),
     )
+
+
+class Puntata(Base):
+    """Una puntata osservata su un sito o caricata dall'analista. Nessun dato sul giocatore."""
+
+    __tablename__ = "puntata"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    sito_id: Mapped[int] = mapped_column(ForeignKey("sito.id", ondelete="CASCADE"), index=True)
+    tipo_gioco: Mapped[str | None] = mapped_column(String(40))
+    importo_puntato: Mapped[float] = mapped_column(Numeric(14, 4))
+    importo_vinto: Mapped[float] = mapped_column(Numeric(14, 4), default=0)
+    valuta: Mapped[str] = mapped_column(String(10), default="EUR")
+    momento: Mapped[datetime | None] = mapped_column(TS)
+    fonte: Mapped[str] = mapped_column(String(20))
+    elemento_grezzo_id: Mapped[int | None] = mapped_column(
+        ForeignKey("elemento_grezzo.id", ondelete="SET NULL")
+    )
+    snapshot_id: Mapped[int | None] = mapped_column(ForeignKey("snapshot.id", ondelete="SET NULL"))
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (CheckConstraint("fonte in ('osservata','caricata')", name="puntata_fonte"),)
+
+
+class LegameSito(Base):
+    """Segnale che due siti appartengono allo stesso operatore (domini gemelli)."""
+
+    __tablename__ = "legame_sito"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    sito_a: Mapped[int] = mapped_column(ForeignKey("sito.id", ondelete="CASCADE"), index=True)
+    sito_b: Mapped[int] = mapped_column(ForeignKey("sito.id", ondelete="CASCADE"), index=True)
+    motivo: Mapped[str] = mapped_column(String(40))
+    valore: Mapped[str] = mapped_column(Text, default="")
+    forza: Mapped[float] = mapped_column(Numeric(4, 3), default=1)
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    __table_args__ = (UniqueConstraint("sito_a", "sito_b", "motivo", "valore", name="legame_sito_unico"),)

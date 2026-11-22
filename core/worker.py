@@ -53,12 +53,49 @@ def _ingest_adm(session: Session, job: Lavoro) -> dict[str, Any]:
     return ingest.ingest_adm(session, _origin(session, job))
 
 
+@handler("acquisisci_rete")
+def _ingest_network(session: Session, job: Lavoro) -> dict[str, Any]:
+    return ingest.ingest_network(session, _origin(session, job))
+
+
+@handler("profila")
+def _profile(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core import profiling
+
+    site = session.get(Sito, job.carico.get("sito_id"))
+    if site is None:
+        return {"saltato": "sito non trovato"}
+    return profiling.profile_site(session, site)
+
+
+@handler("punteggio")
+def _score(session: Session, job: Lavoro) -> dict[str, Any]:
+    from core import profiling
+
+    site = session.get(Sito, job.carico.get("sito_id"))
+    if site is None:
+        return {"saltato": "sito non trovato"}
+    rows = profiling.score_site(session, site)
+    return {"punteggi": len(rows), "classe": rows[0].classe_rischio}
+
+
 @handler("confronto_adm")
 def _compare(session: Session, job: Lavoro) -> dict[str, Any]:
     site = session.get(Sito, job.carico.get("sito_id"))
     if site is None:
         return {"saltato": "sito non trovato"}
+    before = site.esito_adm
     adm.compare_site(session, site)
+    if (
+        before != site.esito_adm
+        and session.execute(
+            select(Lavoro.id).where(Lavoro.sito_id == site.id, Lavoro.tipo == "profila")
+        ).first()
+    ):
+        # L'esito ADM entra nelle regole del Trust Index: si ricalcola.
+        queue.enqueue(
+            session, queue=queue.INTERNAL, kind="punteggio", payload={"sito_id": site.id}, site_id=site.id
+        )
     return {"esito_adm": site.esito_adm}
 
 

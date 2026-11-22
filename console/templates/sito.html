@@ -26,6 +26,10 @@
   <div><div class="riga"><h1>{{ sito.dominio }}</h1>{{ stato(sito.esito_adm, ESITI_ADM, grande=True) }}</div>
     <p>Primo avvistamento {{ sito.primo_avvistamento|quando }} · {{ snaps|length }} snapshot</p></div>
   <div class="azioni">
+    {% if punteggio %}{% include "parti/classe.html" %}{% endif %}
+    <a class="bottone" href="/siti/{{ sito.id }}/report">Report</a>
+    <form method="post" action="/siti/{{ sito.id }}/profila">{{ csrf_campo(csrf) }}
+      <button class="bottone" type="submit">Riprofila</button></form>
     <form method="post" action="/siti/{{ sito.id }}/snapshot">{{ csrf_campo(csrf) }}
       <button class="bottone" type="submit"{% if attivi %} disabled{% endif %}>{{ icona("aggiorna") }} Nuovo snapshot</button></form>
   </div>
@@ -34,7 +38,7 @@
 {% include "parti/avanzamento.html" %}
 
 <nav class="linguette" aria-label="Schede del sito">
-  {% for chiave, nome in [("panoramica", "Panoramica"), ("snapshot", "Snapshot"), ("traffico", "Traffico"), ("sorgente", "Sorgente"), ("origine", "Origine"), ("lavori", "Lavori")] %}
+  {% for chiave, nome in [("panoramica", "Panoramica"), ("profilazione", "Profilazione"), ("trust", "Trust Index"), ("puntate", "Puntate"), ("gemelli", "Gemelli" ~ (" · " ~ gemelli|length if gemelli else "")), ("snapshot", "Snapshot"), ("traffico", "Traffico"), ("sorgente", "Sorgente"), ("origine", "Origine"), ("lavori", "Lavori")] %}
   <a class="linguetta" href="/siti/{{ sito.id }}?scheda={{ chiave }}{% if snap %}&snapshot={{ snap.id }}{% endif %}"{% if scheda == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>
   {% endfor %}
 </nav>
@@ -71,6 +75,10 @@
   </div>
 </div>
 
+{% elif scheda == "profilazione" %}{% include "parti/profilazione.html" %}
+{% elif scheda == "trust" %}{% include "parti/trust.html" %}
+{% elif scheda == "puntate" %}{% include "parti/puntate.html" %}
+{% elif scheda == "gemelli" %}{% include "parti/gemelli.html" %}
 {% elif scheda == "snapshot" %}
 {% if snap %}
 <div class="griglia c21">

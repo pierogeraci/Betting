@@ -1,0 +1,59 @@
+# Tipi di gioco riconosciuti e loro classificazione secondo i cinque criteri della
+# relazione tecnica (struttura, natura del rischio, numero dei soggetti,
+# complessità strutturale, disciplina). Termini multilingue per riconoscerli.
+version: "1"
+tipi:
+  scommesse_sportive:
+    nome: Scommesse sportive
+    termini: [scommesse sportive, sportsbook, sports betting, scommesse, betting, quote, odds, apuestas deportivas, sportwetten, ставки на спорт]
+    criteri: {struttura: bilaterale, natura_rischio: misto, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  scommesse_live:
+    nome: Scommesse live
+    termini: [live betting, scommesse live, in-play, in play, live bet]
+    criteri: {struttura: bilaterale, natura_rischio: misto, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  ippica:
+    nome: Corse dei cavalli
+    termini: [ippica, horse racing, corse dei cavalli, greyhound, levrieri, trotto, galoppo]
+    criteri: {struttura: plurilaterale, natura_rischio: misto, soggetti: collettivo, complessita: organizzato, disciplina: pubblico}
+  esports:
+    nome: Esports
+    termini: [esports, e-sports, cs2, counter-strike, dota, league of legends, valorant]
+    criteri: {struttura: bilaterale, natura_rischio: misto, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  virtuali:
+    nome: Sport virtuali
+    termini: [virtual sports, sport virtuali, virtuali, virtual football]
+    criteri: {struttura: bilaterale, natura_rischio: azzardo, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  slot:
+    nome: Slot
+    termini: [slot, slots, slot machine, megaways, jackpot, tragamonedas, spielautomaten]
+    criteri: {struttura: bilaterale, natura_rischio: azzardo, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  casino_live:
+    nome: Casinò dal vivo
+    termini: [live casino, casino live, casinò live, casino dal vivo, live dealer, croupier dal vivo]
+    criteri: {struttura: bilaterale, natura_rischio: azzardo, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  giochi_tavolo:
+    nome: Giochi da tavolo
+    termini: [roulette, blackjack, baccarat, craps, sic bo, video poker, videopoker]
+    criteri: {struttura: bilaterale, natura_rischio: azzardo, soggetti: individuale, complessita: organizzato, disciplina: pubblico}
+  poker:
+    nome: Poker
+    termini: [poker, texas hold'em, omaha, sit and go, torneo di poker, poker room]
+    criteri: {struttura: plurilaterale, natura_rischio: misto, soggetti: collettivo, complessita: organizzato, disciplina: pubblico}
+  lotterie:
+    nome: Lotterie e bingo
+    termini: [lotteria, lottery, lotto, bingo, keno, gratta e vinci, scratch card, superenalotto]
+    criteri: {struttura: plurilaterale, natura_rischio: azzardo, soggetti: collettivo, complessita: organizzato, disciplina: pubblico}
+  crypto_games:
+    nome: Giochi crypto (crash, dice, plinko)
+    termini: [crash game, crash, dice, plinko, mines, limbo, provably fair, hilo, aviator]
+    criteri: {struttura: bilaterale, natura_rischio: azzardo, soggetti: individuale, complessita: organizzato, disciplina: privato}
+  partite_truccate:
+    nome: Informazioni su partite truccate
+    termini: [fixed matches, fixed match, partite truccate, sure win, combine, 100% sure, insider tips]
+    criteri: {struttura: bilaterale, natura_rischio: misto, soggetti: individuale, complessita: semplice, disciplina: privato}
+etichette_criteri:
+  struttura: {plurilaterale: "Plurilaterale (fondo comune)", bilaterale: "Bilaterale (premio multiplo della posta)"}
+  natura_rischio: {azzardo: "Azzardo (prevale la sorte)", abilita: "Abilità", misto: "Misto"}
+  soggetti: {collettivo: Collettivo, individuale: Individuale}
+  complessita: {organizzato: Organizzato, semplice: "Semplice o a parti contrapposte"}
+  disciplina: {pubblico: Pubblico, privato: Privato}

@@ -26,6 +26,7 @@ NAV_TIMEOUT_MS = 45_000
 SETTLE_TIMEOUT_MS = 8_000
 MAX_HTML_BYTES = 5_000_000
 MAX_SHOT_HEIGHT = 6000
+MAX_ICON_BYTES = 200_000
 VIEWPORT = {"width": 1366, "height": 900}
 
 
@@ -59,7 +60,12 @@ def build_manifest(
     error: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    names = {"html": "pagina.html", "schermata": "schermata.png", "traffico": "traffico.har"}
+    names = {
+        "html": "pagina.html",
+        "schermata": "schermata.png",
+        "traffico": "traffico.har",
+        "icona": "icona.bin",
+    }
     manifest: dict[str, Any] = {
         "esito": state,
         "url_richiesto": requested,
@@ -78,6 +84,25 @@ def build_manifest(
     }
     manifest.update(extra or {})
     return manifest
+
+
+def _icon(context: Any, page: Any) -> dict[str, bytes]:
+    """Scarica l'icona dichiarata dalla pagina (o /favicon.ico): serve a riconoscere i domini gemelli."""
+    from urllib.parse import urljoin
+
+    try:
+        href = page.evaluate(
+            '(() => { const l = document.querySelector(\'link[rel~="icon"], link[rel="shortcut icon"]\');'
+            " return l ? l.getAttribute('href') : null; })()"
+        )
+        icon_url = urljoin(page.url, href or "/favicon.ico")
+        if not url_allowed(icon_url) or not icon_url.startswith(("http://", "https://")):
+            return {}
+        response = context.request.get(icon_url, timeout=10_000, max_redirects=3)
+        body = response.body() if response.ok else b""
+    except Exception:  # noqa: BLE001 - l'icona è facoltativa
+        return {}
+    return {"icona": body} if 0 < len(body) <= MAX_ICON_BYTES else {}
 
 
 def capture(url: str) -> tuple[dict[str, Any], dict[str, bytes]]:
@@ -140,6 +165,7 @@ def capture(url: str) -> tuple[dict[str, Any], dict[str, bytes]]:
                     MAX_SHOT_HEIGHT,
                     int(page.evaluate("document.documentElement.scrollHeight") or VIEWPORT["height"]),
                 )
+                files.update(_icon(context, page))
                 files["schermata"] = page.screenshot(
                     clip={
                         "x": 0,
@@ -206,7 +232,12 @@ def run_job(client: CollectClient, job: CollectJob) -> dict[str, Any]:
             )
         else:
             manifest, files = capture(url)
-    types = {"html": "text/html", "schermata": "image/png", "traffico": "application/json"}
+    types = {
+        "html": "text/html",
+        "schermata": "image/png",
+        "traffico": "application/json",
+        "icona": "application/octet-stream",
+    }
     for key, data in files.items():
         client.upload(job.id, manifest["file"][key]["nome"], data, types[key])
     client.upload(job.id, "manifesto.json", json.dumps(manifest).encode(), "application/json")
