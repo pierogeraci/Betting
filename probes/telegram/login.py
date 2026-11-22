@@ -3,7 +3,7 @@
 import asyncio
 import os
 
-from probes.telegram.probe import SESSION
+from probes.telegram.probe import SESSION, forget_entities
 
 
 async def main() -> None:
@@ -11,6 +11,7 @@ async def main() -> None:
 
     SESSION.parent.mkdir(parents=True, exist_ok=True)
     client = TelegramClient(str(SESSION), int(os.environ["TELEGRAM_API_ID"]), os.environ["TELEGRAM_API_HASH"])
+    forget_entities(client)
     await client.start()
     me = await client.get_me()
     print(f"Account collegato (id {me.id}). La sessione resta nel volume della sonda, fuori dal repository.")

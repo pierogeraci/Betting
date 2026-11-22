@@ -60,10 +60,29 @@ PROBES: dict[str, dict[str, JobRunner]] = {
     "adm": {"scarica_adm": _adm},
     "telegram": {"telegram": _telegram},
     "web": {"crawl": _crawl},
+    "tor": {"crawl": _crawl},
 }
 
 
-def run(probe: str, limit: int | None, client: CollectClient | None = None, idle_exit: bool = False) -> int:
+def cap_payload(job: CollectJob, cap: int | None) -> None:
+    """Applica il tetto della prova reale al lavoro preso, qualunque cosa chieda il carico."""
+    if not cap:
+        return
+    payload = job.payload
+    if "canali" in payload:
+        payload["canali"] = payload["canali"][:cap]
+        payload["messaggi_per_canale"] = min(int(payload.get("messaggi_per_canale", 50)), 50)
+    if "max_pagine" in payload:
+        payload["max_pagine"] = min(int(payload.get("max_pagine", cap)), cap)
+
+
+def run(
+    probe: str,
+    limit: int | None,
+    client: CollectClient | None = None,
+    idle_exit: bool = False,
+    cap: int | None = None,
+) -> int:
     runners = PROBES[probe]
     client = client or CollectClient()
     per_hour = get_settings().collect_pages_per_hour
@@ -83,6 +102,7 @@ def run(probe: str, limit: int | None, client: CollectClient | None = None, idle
             time.sleep(2)
             continue
         recent.append(now)
+        cap_payload(job, cap)
         log.info("lavoro %s (%s) preso", job.id, job.kind)
         try:
             result = runners[job.kind](client, job)
@@ -98,11 +118,12 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     parser = argparse.ArgumentParser(prog="probes.runner")
     parser.add_argument("--sonda", required=True, choices=sorted(PROBES))
-    parser.add_argument("--limite", type=int, default=None)
+    parser.add_argument("--limite", type=int, default=None, help="numero massimo di lavori")
+    parser.add_argument("--tetto", type=int, default=None, help="canali o pagine al massimo per lavoro")
     args = parser.parse_args()
     if args.limite is not None and args.limite < 1:
         parser.error("--limite deve essere almeno 1")
-    done = run(args.sonda, args.limite)
+    done = run(args.sonda, args.limite, cap=args.tetto)
     log.info("lavori eseguiti: %s", done)
 
 

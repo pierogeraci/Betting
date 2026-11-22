@@ -49,7 +49,7 @@ def init() -> None:
             conn.execute(text(f"ALTER ROLE raccolta LOGIN PASSWORD {quoted}"))  # noqa: S608
     settings = get_settings()
     store = get_store()
-    for bucket in (settings.s3_archive_bucket, settings.s3_inbox_bucket):
+    for bucket in (settings.s3_archive_bucket, settings.s3_inbox_bucket, settings.s3_work_bucket):
         store.ensure_bucket(bucket)
     print("Inizializzazione completata.")
 
@@ -62,37 +62,63 @@ def add_user(args: argparse.Namespace) -> None:
 
 
 def enqueue_probe(args: argparse.Namespace) -> None:
-    """Mette in coda i lavori di una sonda. Per `adm`: uno scaricamento per elenco configurato."""
+    """Mette in coda una prova della sonda con un tetto esplicito (vincolo 9).
+
+    - adm: uno scaricamento per elenco configurato;
+    - telegram: al più LIMITE canali attivi, 50 messaggi ciascuno;
+    - web e tor: al più LIMITE pagine.
+    """
+    from core import scheduler
+    from core.models import Sonda
     from core.sources import adm_sources
 
-    if args.sonda != "adm":
-        print("Per questa sonda non c'è nulla da accodare: lavora sui lavori già in coda.")
-        return
-    count = 0
+    limit = args.limite
     with session_scope() as session:
-        for kind, url in adm_sources().items():
-            if not url:
-                print(f"Nessun indirizzo configurato per l'elenco {kind}: lo salto.")
-                continue
-            pending = session.execute(
-                select(Lavoro.id).where(
-                    Lavoro.tipo == "scarica_adm",
-                    Lavoro.stato.in_(["in_attesa", "in_corso"]),
-                    Lavoro.carico["elenco"].astext == kind,
-                )
-            ).first()
-            if pending:
-                continue
+        if args.sonda == "adm":
+            count = 0
+            for kind, url in adm_sources().items():
+                if not url:
+                    print(f"Nessun indirizzo configurato per l'elenco {kind}: lo salto.")
+                    continue
+                pending = session.execute(
+                    select(Lavoro.id).where(
+                        Lavoro.tipo == "scarica_adm",
+                        Lavoro.stato.in_(["in_attesa", "in_corso"]),
+                        Lavoro.carico["elenco"].astext == kind,
+                    )
+                ).first()
+                if not pending:
+                    queue.enqueue(
+                        session,
+                        queue=queue.COLLECT,
+                        kind="scarica_adm",
+                        payload={"elenco": kind, "url": url},
+                        next_kind="acquisisci_adm",
+                        max_attempts=2,
+                    )
+                    count += 1
+            print(f"Lavori accodati: {count}")
+            return
+        if args.sonda in {"telegram", "web", "tor"}:
+            if not limit:
+                raise ValueError("Per una prova reale serve un limite esplicito.")
+            probe = session.execute(select(Sonda).where(Sonda.nome == args.sonda)).scalar_one()
+            payload = scheduler.build_payload(session, probe)
+            if payload is None:
+                raise ValueError("La sonda non ha canali attivi o semi configurati.")
+            if args.sonda == "telegram":
+                payload["canali"] = payload["canali"][:limit]
+                payload["messaggi_per_canale"] = min(payload["messaggi_per_canale"], 50)
+            else:
+                payload["max_pagine"] = min(payload["max_pagine"], limit)
+            payload["prova"] = True
+            kind, follow = scheduler.PROBE_JOBS[args.sonda]
             queue.enqueue(
-                session,
-                queue=queue.COLLECT,
-                kind="scarica_adm",
-                payload={"elenco": kind, "url": url},
-                next_kind="acquisisci_adm",
-                max_attempts=2,
+                session, queue=queue.COLLECT, kind=kind, payload=payload, next_kind=follow, max_attempts=1
             )
-            count += 1
-    print(f"Lavori accodati: {count}")
+            print(f"Prova accodata con tetto {limit}.")
+            return
+        print("Per questa sonda non c'è nulla da accodare: lavora sui lavori già in coda.")
 
 
 def load_adm(args: argparse.Namespace) -> None:
@@ -114,6 +140,7 @@ def main() -> None:
     user.add_argument("--ruolo", default="analista", choices=["analista", "amministratore"])
     probe = sub.add_parser("accoda-sonda")
     probe.add_argument("sonda")
+    probe.add_argument("--limite", type=int, default=0)
     load = sub.add_parser("carica-adm")
     load.add_argument("elenco", choices=list(adm.ELENCHI))
     load.add_argument("file")

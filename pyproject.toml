@@ -47,3 +47,8 @@ ignore = ["S101", "B008", "E501"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S"]
 "migrations/*" = ["S608"]
+# ffmpeg e ffprobe con argomenti fissi: il file analizzato è un percorso temporaneo, mai una stringa esterna.
+"extractors/media.py" = ["S603", "S607"]
+"extractors/topics.py" = ["S106"]
+"core/analysis.py" = ["S311"]
+"core/llm.py" = ["S310"]

@@ -20,6 +20,10 @@ x-app: &app
     COOKIE_SICURI: ${COOKIE_SICURI:-false}
     ADM_GIORNI_VALIDITA: ${ADM_GIORNI_VALIDITA:-30}
     PROVA_URLS: ${PROVA_URLS:-}
+    TELEGRAM_PROBE_ENABLED: ${TELEGRAM_PROBE_ENABLED:-true}
+    SEGRETO_IMPRONTE: ${SEGRETO_IMPRONTE:?manca SEGRETO_IMPRONTE in .env}
+    S3_BUCKET_LAVORAZIONE: ${S3_BUCKET_LAVORAZIONE:-betting-lavorazione}
+    OLLAMA_URL: ${OLLAMA_URL:-}
   networks: [interna]
 
 services:
@@ -47,6 +51,9 @@ services:
       RACCOLTA_S3_ACCESS_KEY: ${RACCOLTA_S3_ACCESS_KEY:?manca RACCOLTA_S3_ACCESS_KEY in .env}
       RACCOLTA_S3_SECRET_KEY: ${RACCOLTA_S3_SECRET_KEY:?manca RACCOLTA_S3_SECRET_KEY in .env}
       S3_BUCKET_ARRIVO: ${S3_BUCKET_ARRIVO:-betting-arrivo}
+      S3_BUCKET_LAVORAZIONE: ${S3_BUCKET_LAVORAZIONE:-betting-lavorazione}
+      ESTRAZIONE_S3_ACCESS_KEY: ${ESTRAZIONE_S3_ACCESS_KEY:?manca ESTRAZIONE_S3_ACCESS_KEY in .env}
+      ESTRAZIONE_S3_SECRET_KEY: ${ESTRAZIONE_S3_SECRET_KEY:?manca ESTRAZIONE_S3_SECRET_KEY in .env}
     volumes:
       - dati_archivio:/data
       - ./docker/archivio.sh:/archivio.sh:ro
@@ -131,6 +138,9 @@ services:
       TELEGRAM_SESSIONE: /sessione/sonda
     volumes: [sessione_telegram:/sessione]
     networks: [raccolta]
+    read_only: true
+    tmpfs: ["/tmp:size=256m"]
+    pids_limit: 256
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: 1g

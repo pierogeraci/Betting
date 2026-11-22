@@ -27,6 +27,19 @@ FLOOD_SLEEP = 120
 URL_IN_TEXT = re.compile(r"(?i)\b(?:https?://|www\.|t\.me/)\S+")
 
 
+def forget_entities(client: Any) -> None:
+    """La sessione di Telethon salverebbe ogni entità incontrata, mittenti dei gruppi compresi.
+
+    Si disattiva il salvataggio e si svuota ciò che una versione precedente avesse salvato.
+    """
+    client.session.save_entities = False
+    try:
+        client.session._conn.execute("delete from entities")  # noqa: SLF001 - tabella interna della sessione SQLite
+        client.session._conn.commit()  # noqa: SLF001
+    except Exception:  # noqa: BLE001, S110 - sessione nuova o di altro tipo: niente da svuotare
+        pass
+
+
 def prefilter(text: str, links: list[str], words: list[str]) -> bool:
     if links or URL_IN_TEXT.search(text or ""):
         return True
@@ -102,6 +115,8 @@ async def collect(payload: dict[str, Any], client: Any, upload) -> dict[str, Any
         try:
             async for message in client.iter_messages(entity, min_id=cursor, limit=limit, reverse=True):
                 cursor = max(cursor, message.id)
+                if isinstance(message, types.MessageService):
+                    continue  # ingressi, uscite e altre azioni: nessun contenuto, nessun dato da conservare
                 text = message.message or ""
                 links = message_links(message)
                 item = {
@@ -154,6 +169,7 @@ async def _run(payload: dict[str, Any], upload) -> dict[str, Any]:
     if not api_id or not api_hash:
         raise RuntimeError("TELEGRAM_API_ID e TELEGRAM_API_HASH mancano in .env")
     client = TelegramClient(str(SESSION), int(api_id), api_hash, flood_sleep_threshold=FLOOD_SLEEP)
+    forget_entities(client)
     await client.connect()
     try:
         if not await client.is_user_authorized():

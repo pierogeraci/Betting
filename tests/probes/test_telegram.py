@@ -171,3 +171,34 @@ def test_prefilter():
     assert prefilter("guarda t.me/qualcosa", [], [])
     assert prefilter("super BONUS", [], ["bonus"])
     assert not prefilter("buongiorno", [], ["bonus"])
+
+
+def test_session_does_not_store_entities(tmp_path):
+    from telethon import TelegramClient
+
+    from probes.telegram.probe import forget_entities
+
+    client = TelegramClient(str(tmp_path / "s"), 1, "x")
+    client.session._conn.execute("insert into entities values (1, 2, 'mario', '+39000', 'Mario', 0)")
+    forget_entities(client)
+    assert client.session.save_entities is False
+    assert client.session._conn.execute("select count(*) from entities").fetchone()[0] == 0
+
+
+def test_service_messages_are_skipped():
+    msgs = {
+        "c": [
+            types.MessageService(
+                id=3,
+                peer_id=types.PeerChannel(1),
+                date=datetime.now(UTC),
+                action=types.MessageActionChatJoinedByLink(inviter_id=5),
+            ),
+            FakeMessage(4, "testo"),
+        ]
+    }
+    client = FakeClient({"c": channel("c")}, msgs)
+    result = asyncio.run(
+        collect({"canali": [{"id": 1, "nome": "c"}], "parole": []}, client, lambda n, d: None)
+    )
+    assert [m["id"] for m in result["messaggi"]] == [4] and result["cursori"]["1"] == 4

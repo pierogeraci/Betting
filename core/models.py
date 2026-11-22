@@ -440,3 +440,59 @@ class Avviso(Base):
     letto: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     letto_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
     creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow, index=True)
+
+
+class Etichetta(Base):
+    """Etichetta dell'analista su un elemento grezzo: forma il set di valutazione e di addestramento."""
+
+    __tablename__ = "etichetta"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    elemento_grezzo_id: Mapped[int] = mapped_column(
+        ForeignKey("elemento_grezzo.id", ondelete="CASCADE"), unique=True
+    )
+    pubblicita_gioco: Mapped[bool | None] = mapped_column(Boolean)
+    entita: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    note: Mapped[str] = mapped_column(Text, default="")
+    utente_id: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))
+    creato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    aggiornato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+
+
+class EmojiSignificato(Base):
+    """Dizionario delle emoji: significato nel contesto delle pubblicità di gioco, per piattaforma."""
+
+    __tablename__ = "emoji"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    carattere: Mapped[str] = mapped_column(String(16))
+    piattaforma: Mapped[str] = mapped_column(String(20), default="")
+    significato: Mapped[str] = mapped_column(String(200))
+    categoria: Mapped[str] = mapped_column(String(40), default="")
+    occorrenze: Mapped[int] = mapped_column(Integer, default=0)
+    __table_args__ = (UniqueConstraint("carattere", "piattaforma", name="emoji_unica"),)
+
+
+class Valutazione(Base):
+    """Risultato di una valutazione sul set etichettato: precisione e richiamo misurati."""
+
+    __tablename__ = "valutazione"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ambito: Mapped[str] = mapped_column(String(40))
+    versione: Mapped[str] = mapped_column(String(80))
+    esempi: Mapped[int] = mapped_column(Integer)
+    misure: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    errori: Mapped[list[Any]] = mapped_column(default=list)
+    eseguita_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+
+
+class Modello(Base):
+    """Modello addestrato o risultato non supervisionato (classificatore, argomenti), archiviato per hash."""
+
+    __tablename__ = "modello"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nome: Mapped[str] = mapped_column(String(40), index=True)
+    versione: Mapped[str] = mapped_column(String(80))
+    chiave: Mapped[str | None] = mapped_column(String(200))
+    metriche: Mapped[dict[str, Any]] = mapped_column(default=dict)
+    attivo: Mapped[bool] = mapped_column(Boolean, default=True)
+    addestrato_il: Mapped[datetime] = mapped_column(TS, default=utcnow)
+    addestrato_da: Mapped[int | None] = mapped_column(ForeignKey("utente.id"))

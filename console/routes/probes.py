@@ -219,6 +219,12 @@ def channel_action(
     )
     if target is None:
         raise HTTPException(404, "Azione sconosciuta.")
+    if target == "rifiutato":
+        from core.discovery import erase_channel
+
+        name = channel.identificativo
+        erase_channel(db, channel, f"Rifiutato da {user.nome_utente}: nome cancellato")
+        return redirect("/canali", f"@{name} rifiutato: il nome è stato cancellato.")
     channel.stato = target
     if target == "attivo":
         channel.approvato_da = user.id

@@ -193,3 +193,66 @@ def test_new_sites_cap(db, store):
     assert stats["siti_nuovi"] == 2 and stats["siti_oltre_tetto"] >= 1
     assert any("bloccate" in e for e in stats["errori"])
     assert {s.fonte_scoperta for s in db.query(Sito)} == {"web"}
+
+
+def test_erased_names_do_not_come_back(db, store, monkeypatch):
+    from core.discovery import RunStats, erase_channel, process_text, store_element
+
+    monkeypatch.setenv("SEGRETO_IMPRONTE", "segreto-di-prova")
+    el, _ = store_element(
+        db,
+        source="web",
+        kind="pagina",
+        reference="https://x.example.org/",
+        content="",
+        digest="c" * 64,
+        probe_id=None,
+        metadata={},
+    )
+    stats = RunStats()
+    process_text(
+        db, el, "scommesse su t.me/supporto_mario", stats, keywords=[], source_label="web", max_new_sites=0
+    )
+    ch = db.query(Canale).filter(Canale.identificativo == "supporto_mario").one()
+    alert = db.query(Avviso).filter(Avviso.canale_id == ch.id).one()
+    assert "supporto_mario" not in alert.titolo + alert.testo
+    erase_channel(db, ch, "rifiutato")
+    assert ch.identificativo.startswith("rimosso-") and "mario" not in ch.identificativo
+    process_text(
+        db, el, "di nuovo t.me/supporto_mario", RunStats(), keywords=[], source_label="web", max_new_sites=0
+    )
+    assert db.query(Canale).count() == 1  # non rientra
+
+
+def test_blocked_crawl_page_opens_review(db, store):
+    from core.models import Revisione
+
+    web = probe(db, "web")
+    job = enqueue(db, queue=COLLECT, kind="crawl", payload={"sonda_id": web.id}, next_kind="acquisisci_crawl")
+    drop(
+        store,
+        job.id,
+        {
+            "esito": "riuscito",
+            "pagine": [
+                {"url": "https://dir.example.org/x", "codice_http": 403, "testo": "", "bloccato": "captcha"}
+            ],
+        },
+    )
+    ingest_crawl(db, job)
+    review = db.query(Revisione).one()
+    assert review.tipo == "pagina_bloccata" and "dir.example.org/x" in review.motivo
+
+
+def test_runner_cap():
+    from core.collect_client import CollectJob
+    from probes.runner import cap_payload
+
+    job = CollectJob(
+        1, "telegram", {"canali": [{"id": i} for i in range(10)], "messaggi_per_canale": 1000}, 1
+    )
+    cap_payload(job, 2)
+    assert len(job.payload["canali"]) == 2 and job.payload["messaggi_per_canale"] == 50
+    crawl = CollectJob(2, "crawl", {"max_pagine": 200}, 1)
+    cap_payload(crawl, 5)
+    assert crawl.payload["max_pagine"] == 5

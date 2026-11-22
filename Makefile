@@ -36,11 +36,16 @@ test: ## Test unitari: solo fixture, nessuna rete. Serve `docker compose up -d d
 lint: ## Formattazione e controlli statici
 	$(PY) -m ruff check . && $(PY) -m ruff format --check .
 
-collect: ## Esegue una sonda su dati reali nel suo contenitore: make collect SONDA=snapshot LIMITE=3
-	@test -n "$(SONDA)" || { echo "Indica la sonda: SONDA=snapshot|adm"; exit 1; }
-	@[[ "$(LIMITE)" =~ ^[1-9][0-9]*$$ ]] || { echo "Indica un limite esplicito: LIMITE=<n>"; exit 1; }
+collect: ## Prova su dati reali nel contenitore della sonda, con tetto: make collect SONDA=snapshot|adm|rete|telegram|web|tor LIMITE=<n>
+	@test -n "$(SONDA)" || { echo "Indica la sonda: SONDA=snapshot|adm|rete|telegram|web|tor"; exit 1; }
+	@[[ "$(LIMITE)" =~ ^[1-9][0-9]*$$ ]] || { echo "Indica un limite esplicito: LIMITE=<n> (lavori per snapshot e adm, canali per telegram, pagine per web e tor)"; exit 1; }
+ifneq ($(filter $(SONDA),telegram web tor),)
+	$(COMPOSE) run --rm init python -m core.cli accoda-sonda $(SONDA) --limite $(LIMITE)
+	$(COMPOSE) --profile raccolta run --rm $(if $(filter telegram,$(SONDA)),telegram,raccolta) python -m probes.runner --sonda $(SONDA) --limite 1 --tetto $(LIMITE)
+else
 	$(COMPOSE) run --rm init python -m core.cli accoda-sonda $(SONDA)
-	$(COMPOSE) --profile raccolta run --rm $(if $(filter telegram,$(SONDA)),telegram,raccolta) python -m probes.runner --sonda $(SONDA) --limite $(LIMITE)
+	$(COMPOSE) --profile raccolta run --rm raccolta python -m probes.runner --sonda $(SONDA) --limite $(LIMITE)
+endif
 
 test-integration: ## Prova su dati reali: URL in PROVA_URLS (al massimo tre) → snapshot → confronto ADM
 	$(COMPOSE) up -d --build db archivio lavoratore

@@ -16,13 +16,27 @@ from typing import Any
 from urllib.parse import urlsplit
 
 USER_AGENT = "betting-antifrode/0.1 (+ricerca su pagine pubbliche)"
+MAX_DEPTH = 2
+MAX_PAGES = 200
+
+
+def abort_browser_request(request) -> bool:
+    """Nel browser usato per Tor ogni richiesta passa di qui: solo .onion, mai indirizzi interni, niente media."""
+    from probes.snapshot.guard import url_allowed
+
+    if request.resource_type in {"image", "media", "font"}:
+        return True
+    host = (urlsplit(request.url).hostname or "").lower()
+    if request.url.startswith(("data:", "blob:")):
+        return False
+    return not host.endswith(".onion") or not url_allowed(request.url)
 
 
 def settings(payload: dict[str, Any]) -> dict[str, Any]:
     tor = bool(payload.get("tor"))
     base = {
         "USER_AGENT": USER_AGENT,
-        "ROBOTSTXT_OBEY": not tor,
+        "ROBOTSTXT_OBEY": True,
         "DOWNLOAD_DELAY": 2.0,
         "RANDOMIZE_DOWNLOAD_DELAY": False,
         "CONCURRENT_REQUESTS": 4,
@@ -31,8 +45,9 @@ def settings(payload: dict[str, Any]) -> dict[str, Any]:
         "AUTOTHROTTLE_START_DELAY": 2.0,
         "RETRY_ENABLED": False,
         "COOKIES_ENABLED": False,
-        "DEPTH_LIMIT": int(payload.get("profondita", 1)),
-        "CLOSESPIDER_PAGECOUNT": int(payload.get("max_pagine", 40)),
+        # Tetti applicati anche qui, non solo nel pianificatore e nel portale.
+        "DEPTH_LIMIT": max(0, min(int(payload.get("profondita", 1)), MAX_DEPTH)),
+        "CLOSESPIDER_PAGECOUNT": max(1, min(int(payload.get("max_pagine", 40)), MAX_PAGES)),
         "CLOSESPIDER_TIMEOUT": 1800,
         "DOWNLOAD_TIMEOUT": 60,
         "DOWNLOAD_MAXSIZE": 5_000_000,
@@ -56,7 +71,7 @@ def settings(payload: dict[str, Any]) -> dict[str, Any]:
                     )
                 },
             },
-            "PLAYWRIGHT_ABORT_REQUEST": lambda req: req.resource_type in {"image", "media", "font"},
+            "PLAYWRIGHT_ABORT_REQUEST": abort_browser_request,
             "DOWNLOAD_TIMEOUT": 120,
         }
     return base

@@ -26,6 +26,7 @@ class Settings:
     s3_region: str
     s3_archive_bucket: str
     s3_inbox_bucket: str
+    s3_work_bucket: str
     s3_access_key: str
     s3_secret_key: str
     collect_s3_access_key: str
@@ -59,6 +60,7 @@ def get_settings() -> Settings:
         s3_region=_env("S3_REGION", "us-east-1"),
         s3_archive_bucket=_env("S3_BUCKET", "betting-grezzi"),
         s3_inbox_bucket=_env("S3_BUCKET_ARRIVO", "betting-arrivo"),
+        s3_work_bucket=_env("S3_BUCKET_LAVORAZIONE", "betting-lavorazione"),
         s3_access_key=_env("S3_ACCESS_KEY"),
         s3_secret_key=_env("S3_SECRET_KEY"),
         collect_s3_access_key=_env("RACCOLTA_S3_ACCESS_KEY"),

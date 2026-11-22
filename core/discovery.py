@@ -173,10 +173,36 @@ def process_text(
     return hits
 
 
+def erased_name(name: str) -> str:
+    """Impronta non invertibile di un nome cancellato (HMAC con un segreto in .env)."""
+    import hashlib
+    import hmac
+    import os
+
+    secret = os.environ.get("SEGRETO_IMPRONTE", "") or os.environ.get("POSTGRES_PASSWORD", "")
+    return "rimosso-" + hmac.new(secret.encode(), name.lower().encode(), hashlib.sha256).hexdigest()[:24]
+
+
+def erase_channel(session: Session, channel: Canale, reason: str) -> None:
+    """Toglie il nome di un canale rifiutato da canale e avvisi: può essere l'account di una persona."""
+    name = channel.identificativo
+    if name.startswith("rimosso-"):
+        return
+    channel.identificativo = erased_name(name)
+    channel.titolo = ""
+    channel.stato = "rifiutato"
+    channel.motivo = reason
+    for alert in session.execute(select(Avviso).where(Avviso.canale_id == channel.id)).scalars():
+        alert.titolo = "Canale rifiutato: nome cancellato"
+        alert.testo = ""
+
+
 def _candidate_channel(session: Session, name: str, element: ElementoGrezzo) -> bool:
     """Un canale scoperto entra in stato da_approvare: lo attiva l'analista."""
     if name.startswith("+"):
         return False  # link d'invito: gruppo privato, escluso
+    if session.execute(select(Canale.id).where(Canale.identificativo == erased_name(name))).first():
+        return False  # già rifiutato: non rientra
     result = session.execute(
         insert(Canale)
         .values(
@@ -195,7 +221,8 @@ def _candidate_channel(session: Session, name: str, element: ElementoGrezzo) -> 
         session.add(
             Avviso(
                 tipo="canale_scoperto",
-                titolo=f"Nuovo canale da approvare: @{name.lower()}",
+                # Il nome non entra nell'avviso: si legge dal canale finché non viene rifiutato.
+                titolo="Nuovo canale da approvare",
                 testo=f"Citato in {element.riferimento[:300]}",
                 elemento_grezzo_id=element.id,
                 canale_id=result[0],

@@ -17,7 +17,7 @@ from core import discovery
 from core.config import get_settings
 from core.ingest import IngestError, _read_manifest, _text
 from core.keywords import active_keywords
-from core.models import Avviso, Canale, Lavoro, Media, Sonda, utcnow
+from core.models import Avviso, Canale, Lavoro, Media, Revisione, Sonda, utcnow
 from core.storage import archive_bytes, get_store, sha256_hex
 
 MAX_WAIT_SECONDS = 86_400
@@ -73,6 +73,8 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
     keywords = active_keywords(session)
     max_new = int((probe.configurazione or {}).get("max_siti_nuovi", 30)) if probe else 30
     files: list[str] = []
+    new_media: list[Media] = []
+    new_elements: list[int] = []
     channels = {
         str(c.id): c
         for c in session.query(Canale).filter(
@@ -88,10 +90,9 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
             channel.ultimo_errore = _text(info["errore"], 500)
             if "pubblico" in str(info["errore"]):
                 # Non è un canale pubblico: può essere l'account di una persona. Il nome non si conserva.
-                channel.stato = "rifiutato"
-                channel.motivo = "Non è un canale o gruppo pubblico: nome cancellato"
-                channel.identificativo = "rimosso-" + sha256_hex(channel.identificativo.encode())[:16]
-                channel.titolo = ""
+                discovery.erase_channel(
+                    session, channel, "Non è un canale o gruppo pubblico: nome cancellato"
+                )
             continue
         channel.titolo = _text(info.get("titolo"), 300) or channel.titolo
         channel.tipo = info.get("tipo") if info.get("tipo") in {"canale", "gruppo"} else channel.tipo
@@ -141,6 +142,7 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
             stats.duplicates += 1
             continue
         stats.elements += 1
+        new_elements.append(element.id)
         for media in (message.get("media") or [])[:5]:
             if not isinstance(media, dict) or not media.get("nome") or "/" in str(media["nome"]):
                 continue
@@ -155,7 +157,7 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
                 or "application/octet-stream"
             )
             digest, key = archive_bytes(data, mime)
-            session.add(
+            new_media.append(
                 Media(
                     elemento_grezzo_id=element.id,
                     tipo=media.get("tipo")
@@ -168,6 +170,7 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
                     oggetto_chiave=key,
                 )
             )
+            session.add(new_media[-1])
         discovery.process_text(
             session,
             element,
@@ -184,32 +187,16 @@ def ingest_telegram(session: Session, origin: Lavoro) -> dict[str, Any]:
         if channel is not None and isinstance(cursor, int) and cursor > (channel.cursore or 0):
             channel.cursore = cursor
     session.flush()
-    # Estrazione multimediale dei file scaricati (Fase 3).
+    # Estrazione multimediale dei file scaricati (Fase 3) e analisi del testo dei messaggi.
     from core import queue
-    from core.models import ElementoGrezzo
+    from core.media_jobs import request_extraction
 
-    for media in (
-        session.query(Media)
-        .join(ElementoGrezzo)
-        .filter(
-            ElementoGrezzo.sonda_id == (probe.id if probe else None),
-            Media.creato_il >= utcnow() - timedelta(minutes=10),
+    for media in new_media:
+        request_extraction(session, media)
+    for element_id in new_elements:
+        queue.enqueue(
+            session, queue=queue.INTERNAL, kind="analizza_testo", payload={"elemento_id": element_id}
         )
-    ):
-        if media.tipo in {"immagine", "video", "audio"}:
-            queue.enqueue(
-                session,
-                queue=queue.COLLECT,
-                kind="estrai_media",
-                payload={
-                    "media_id": media.id,
-                    "chiave": media.oggetto_chiave,
-                    "tipo": media.tipo,
-                    "mime": media.mime,
-                },
-                next_kind="acquisisci_estrazione",
-                max_attempts=2,
-            )
     _finish_probe(session, probe, manifest, stats)
     _cleanup(origin.id, files)
     return stats.as_dict()
@@ -229,7 +216,8 @@ def ingest_crawl(session: Session, origin: Lavoro) -> dict[str, Any]:
             continue
         url = _text(page.get("url"), 2000) or ""
         text = _text(page.get("testo"), 20000) or ""
-        digest = str(page.get("sha256") or sha256_hex((url + text).encode()))[:64]
+        # L'hash si calcola qui, sul contenuto conservato: quello del manifesto non è verificabile.
+        digest = sha256_hex(f"{source}|{url}|{text}".encode())
         if page.get("bloccato"):
             blocked += 1
         element, created = discovery.store_element(
@@ -253,6 +241,14 @@ def ingest_crawl(session: Session, origin: Lavoro) -> dict[str, Any]:
             continue
         stats.elements += 1
         if page.get("bloccato"):
+            # Pagina bloccata: nessun nuovo tentativo, va alla revisione manuale.
+            session.add(
+                Revisione(
+                    tipo="pagina_bloccata",
+                    elemento_grezzo_id=element.id,
+                    motivo=f"{_text(page.get('bloccato'), 60)}: {url[:300]} non è stata letta dal crawler {source}. Nessun tentativo di aggiramento.",
+                )
+            )
             continue
         links = [str(link)[:2000] for link in (page.get("link_esterni") or [])[:150]]
         discovery.process_text(

@@ -47,3 +47,22 @@ def test_guard_middleware():
         with pytest.raises(IgnoreRequest):
             mw.process_request(Request(url))
     assert tor.process_request(Request("http://" + "a" * 56 + ".onion/")) is None
+
+
+def test_caps_inside_container():
+    s = settings({"profondita": 9, "max_pagine": 10_000})
+    assert s["DEPTH_LIMIT"] == 2 and s["CLOSESPIDER_PAGECOUNT"] == 200
+
+
+def test_tor_browser_requests_are_filtered():
+    from types import SimpleNamespace
+
+    from probes.web.crawl import abort_browser_request
+
+    onion = "http://" + "a" * 56 + ".onion/"
+    assert not abort_browser_request(SimpleNamespace(url=onion, resource_type="document"))
+    assert abort_browser_request(
+        SimpleNamespace(url="https://cdn.clearweb.example.com/x.js", resource_type="script")
+    )
+    assert abort_browser_request(SimpleNamespace(url="http://127.0.0.1:5432/", resource_type="xhr"))
+    assert abort_browser_request(SimpleNamespace(url=onion + "a.png", resource_type="image"))
