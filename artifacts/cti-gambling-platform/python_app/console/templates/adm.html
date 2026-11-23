@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, csrf_campo, icona %}
+{% block titolo %}Elenchi ADM{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Elenchi ADM</h1><p>Concessionari autorizzati e siti inibiti. Ogni caricamento è una versione: i confronti registrano quale versione hanno usato.</p></div></div>
+{% if errore %}<div class="messaggio errore" role="alert">{{ errore }}</div>{% endif %}
+<div class="griglia c2">
+  {% for e in elenchi %}
+  <section class="scheda"><header><h2>{{ e.etichetta }}</h2>
+    {% if not e.carico %}<span class="etichetta-stato danger">Mancante</span>{% elif e.vecchio %}<span class="etichetta-stato warn">Da aggiornare</span>{% else %}<span class="etichetta-stato ok">Aggiornato</span>{% endif %}</header>
+    <div class="corpo pila">
+      {% if e.carico %}<dl class="fatti">
+        <dt>Versione</dt><dd>{{ e.carico.versione }}</dd>
+        <dt>Domini</dt><dd>{{ e.carico.righe_valide|migliaia }} <span class="secondario aiuto">{{ e.carico.righe_scartate }} righe scartate su {{ e.carico.righe_totali }}</span></dd>
+        <dt>Caricato il</dt><dd>{{ e.carico.caricato_il|quando }}</dd><dt>Verificato il</dt><dd>{{ e.carico.verificato_il|quando }}</dd>
+        <dt>sha256</dt><dd class="mono">{{ e.carico.sha256 }}</dd></dl>
+        {% if e.carico.note %}<div class="messaggio avviso">{{ e.carico.note }}</div>{% endif %}
+      {% else %}<p class="aiuto">Finché l'elenco manca, il confronto dei siti con questo elenco resta "non determinabile".</p>{% endif %}
+      {% if utente.ruolo == "amministratore" %}
+      <form method="post" action="/adm/carica" enctype="multipart/form-data" class="pila">{{ csrf_campo(csrf) }}
+        <input type="hidden" name="elenco" value="{{ e.tipo }}">
+        <div class="caricamento"><strong id="file-{{ e.tipo }}">Carica un file dell'elenco</strong>Testo, CSV o HTML scaricato dal portale ADM
+          <input type="file" name="file" required data-file="#file-{{ e.tipo }}" aria-label="File dell'elenco {{ e.etichetta }}"></div>
+        <div class="riga"><button class="bottone primario" type="submit">Carica nuova versione</button></div>
+      </form>
+      <form method="post" action="/adm/scarica" class="riga">{{ csrf_campo(csrf) }}<input type="hidden" name="elenco" value="{{ e.tipo }}">
+        <button class="bottone" type="submit"{% if not e.fonte %} disabled{% endif %}>{{ icona("scarica") }} Scarica dal portale ADM</button>
+        {% if not e.fonte %}<span class="aiuto">Indirizzo non configurato in <span class="mono">config/fonti.yaml</span></span>{% endif %}</form>
+      {% endif %}
+    </div></section>
+  {% endfor %}
+</div>
+<section class="scheda"><header><h2>Cerca un dominio negli elenchi</h2></header>
+  <div class="corpo pila">
+    <form class="riga" action="/adm/cerca" method="get" hx-get="/adm/cerca" hx-target="#esito-ricerca" hx-swap="outerHTML">
+      <input type="search" name="dominio" placeholder="esempio.com" aria-label="Dominio da cercare" required>
+      <button class="bottone" type="submit">Cerca</button></form>
+    <div id="esito-ricerca"></div>
+  </div></section>
+<section class="scheda"><header><h2>Storico dei caricamenti</h2></header>
+  {% if storico %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Elenco</th><th>Versione</th><th>Stato</th><th class="num">Domini</th><th>Caricato il</th><th>Origine</th><th>Hash</th></tr></thead><tbody>
+  {% for c in storico %}<tr><td>{{ etichette[c.elenco] }}</td><td>{{ c.versione }}</td><td>{{ stato(c.stato) }}</td><td class="num">{{ c.righe_valide|migliaia }}</td>
+    <td>{{ c.caricato_il|quando }}</td><td><span class="taglia">{{ c.fonte_url or c.nome_file or "—" }}</span></td><td class="mono" title="{{ c.sha256 }}">{{ c.sha256|breve }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><p>Nessun caricamento finora.</p></div>{% endif %}
+</section>
+{% endblock %}

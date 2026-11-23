@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Registri pubblici{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Registri pubblici</h1><p>Registri di società e di licenze di gioco (per esempio Curaçao, Malta), esportati dalle fonti ufficiali e caricati qui. Servono a proporre la legal entity dei siti.</p></div></div>
+<div class="griglia c21">
+<section class="scheda"><header><h2>Registri caricati</h2></header>
+  {% if conteggi %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Registro</th><th>Fonte</th><th class="num">Voci</th></tr></thead><tbody>
+  {% for r, f, n in conteggi %}<tr><td>{{ "Società" if r == "societa" else "Licenze" }}</td><td>{{ f }}</td><td class="num">{{ n|migliaia }}</td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="vuoto"><h3>Nessun registro</h3><p>Carica un CSV con le colonne nome, paese, numero, stato.</p></div>{% endif %}</section>
+{% if utente.ruolo == "amministratore" %}<section class="scheda"><header><h2>Carica un registro</h2></header>
+  <form class="corpo" method="post" action="/registri" enctype="multipart/form-data">{{ csrf_campo(csrf) }}
+    <div class="campo"><label for="reg">Tipo</label><select id="reg" name="registro"><option value="licenze">Licenze di gioco</option><option value="societa">Società</option></select></div>
+    <div class="campo"><label for="fonte">Fonte</label><input id="fonte" name="fonte" type="text" placeholder="Curaçao Gaming Authority, elenco licenze, 2026-11" required></div>
+    <div class="campo"><div class="caricamento"><strong id="file-reg">File CSV</strong>Colonne: nome, paese, numero, stato<input type="file" name="file" accept=".csv,text/csv" required data-file="#file-reg" aria-label="File del registro"></div></div>
+    <button class="bottone primario" type="submit">Carica</button>
+    <p class="aiuto">Solo registri di persone giuridiche. Il file resta nell'archivio grezzo con il suo hash.</p></form></section>{% endif %}
+</div>
+{% endblock %}

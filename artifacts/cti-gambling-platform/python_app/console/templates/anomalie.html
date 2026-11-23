@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Anomalie sui conti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Anomalie sui conti di gioco</h1><p>Modulo dimostrativo su <strong>dati sintetici</strong>: i dati dei conti esistono solo presso un concessionario o un'autorità che abbia titolo a trattarli. Le anomalie sono inserite e note, quindi si può misurare quante ne trova il modulo.</p></div></div>
+<div class="messaggio avviso">Nessun dato reale di giocatori entra in questo modulo. I conti mostrati sono generati.</div>
+<div class="griglia c21">
+<section class="scheda"><header><h2>Genera e analizza</h2></header>
+  <form class="corpo griglia c3" method="post" action="/anomalie">{{ csrf_campo(csrf) }}
+    <div class="campo"><label for="nc">Conti sintetici</label><input id="nc" name="conti" type="text" inputmode="numeric" value="300"></div>
+    <div class="campo"><label for="qa">Quota con anomalie</label><input id="qa" name="quota" type="text" inputmode="decimal" value="0.06"></div>
+    <div class="campo"><label for="sm">Seme</label><input id="sm" name="seme" type="text" inputmode="numeric" value="7"></div>
+    <button class="bottone primario" type="submit">Genera e analizza</button></form></section>
+<section class="scheda"><header><h2>Indicatori</h2></header><div class="corpo"><ul class="dettagli">{% for code, _, text in regole %}<li><strong>{{ text }}</strong> <span class="mono">{{ code }}</span></li>{% endfor %}
+  <li><strong>Modello di anomalia</strong> (Isolation Forest) per ciò che le regole non coprono</li></ul></div></section>
+</div>
+{% if modello %}{% set m = modello.metriche %}
+<div class="griglia c4">
+  <div class="scheda numero"><span class="etichetta">Conti</span><span class="valore">{{ m.valutazione.conti }}</span><span class="nota">{{ m.valutazione.anomalie_inserite }} con anomalie inserite</span></div>
+  <div class="scheda numero"><span class="etichetta">Segnalati</span><span class="valore">{{ m.valutazione.segnalati }}</span><span class="nota">seme {{ m.seme }}</span></div>
+  <div class="scheda numero"><span class="etichetta">Precisione</span><span class="valore">{{ m.valutazione.precisione }}</span><span class="nota">sulle anomalie note</span></div>
+  <div class="scheda numero"><span class="etichetta">Richiamo</span><span class="valore">{{ m.valutazione.richiamo }}</span><span class="nota">{% for p, v in m.valutazione.per_schema.items() %}{{ p.replace("_", " ") }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</span></div>
+</div>
+<section class="scheda"><header><h2>Conti segnalati</h2><span class="aiuto">Ogni segnalazione indica l'indicatore che l'ha generata</span></header>
+  <div class="tabella-contenitore"><table><thead><tr><th>Conto</th><th>Motivi</th><th class="num">Anomalia</th><th>Schema inserito</th></tr></thead><tbody>
+  {% for r in m.segnalazioni[:60] %}<tr><td class="mono">{{ r.conto }}{% if r.stato == "sospeso" %}<span class="secondario">sospeso</span>{% endif %}</td>
+    <td>{% for mo in r.motivi %}<span class="secondario"><strong>{{ mo.descrizione }}</strong> · {{ mo.indicatore }} = {{ mo.valore }}</span>{% endfor %}</td>
+    <td class="num">{{ r.punteggio_anomalia }}</td><td>{{ r.schema_inserito.replace("_", " ") if r.schema_inserito else "nessuno (falso positivo)" }}</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endif %}
+{% endblock %}

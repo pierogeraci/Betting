@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block titolo %}{{ ev.nome }}{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><div class="riga"><h1>{{ ev.nome }}</h1><span class="etichetta-stato grande {{ {'alto': 'danger', 'medio': 'warn', 'basso': 'ok'}.get(ev.rating, 'neutral') }}">Rischio {{ ev.rating }}</span></div>
+  <p>{{ ev.competizione }} · inizio {{ ev.inizio|quando }} · {{ ev.dettaglio.quote }} quote da {{ ev.dettaglio.bookmaker|length }} bookmaker</p></div>
+  <a class="bottone" href="/eventi">Tutti gli eventi</a></div>
+<section class="scheda"><header><h2>Segnali</h2></header><div class="corpo pila">
+  {% for s in ev.dettaglio.segnali %}<div class="evidenza"><strong>{{ s.segnale.replace("_", " ") }}</strong><p class="dettagli">{{ s.descrizione }} · peso {{ s.peso }}</p></div>
+  {% else %}<p class="aiuto">Nessun segnale: le quote sono coerenti tra i bookmaker e stabili.</p>{% endfor %}</div></section>
+<div class="griglia c3">{% for g in grafici %}
+  <section class="scheda"><header><h2>Esito «{{ g.esito }}»</h2><span class="aiuto">{{ "%.2f"|format(g.min) }}–{{ "%.2f"|format(g.max) }}</span></header><div class="corpo">
+    <svg class="grafico linee" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Quote dell'esito {{ g.esito }} nel tempo">
+      {% if g.finale is not none %}<rect class="finale" x="{{ g.finale|round(2) }}" y="0" width="{{ (100 - g.finale)|round(2) }}" height="100"><title>Ultime ore prima dell'inizio</title></rect>{% endif %}
+      {% for s in g.serie %}<polyline class="serie s{{ loop.index0 % 5 }}" points="{{ s.punti }}" vector-effect="non-scaling-stroke"><title>{{ s.bookmaker }}</title></polyline>{% endfor %}</svg>
+    <div class="legenda">{% for s in g.serie %}<span><i class="serie-legenda s{{ loop.index0 % 5 }}"></i>{{ s.bookmaker }} · {{ "%.2f"|format(s.ultima) }}</span>{% endfor %}</div>
+  </div></section>{% endfor %}</div>
+{% endblock %}

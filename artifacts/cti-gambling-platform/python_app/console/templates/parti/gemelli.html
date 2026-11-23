@@ -1,0 +1,9 @@
+{% from "parti/macro.html" import stato %}
+<section class="scheda"><header><h2>Domini gemelli</h2>{% if sito.gruppo %}<a href="/siti?gruppo={{ sito.gruppo }}">Tutto il gruppo {{ sito.gruppo }}</a>{% endif %}</header>
+{% if gemelli %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Sito</th><th>Esito ADM</th><th>Cosa condividono</th></tr></thead><tbody>
+{% for g in gemelli %}<tr><td><a href="/siti/{{ g.sito.id }}"><strong>{{ g.sito.dominio }}</strong></a></td><td>{{ stato(g.sito.esito_adm, ESITI_ADM) }}</td>
+  <td>{% for m in g.motivi %}<span class="secondario"><strong>{{ {"tracciamento": "Identificativo di tracciamento", "icona": "Stessa icona", "struttura_html": "Stessa struttura HTML", "ip": "Stesso certificato o IP"}.get(m.motivo, m.motivo) }}</strong> <span class="mono">{{ m.valore|truncate(60) }}</span>{% if m.forza < 0.5 %} · indizio debole{% endif %}</span>{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>
+<div class="corpo"><p class="aiuto">Una rete di siti con stessi identificativi, icona o certificato si tratta come un solo operatore. Lo stesso IP da solo è un indizio debole: può essere un hosting condiviso.</p></div>
+{% else %}<div class="vuoto"><h3>Nessun gemello trovato</h3><p>Si cercano identificativi di tracciamento, icona, certificato, IP e struttura HTML in comune con gli altri siti analizzati.</p></div>{% endif %}
+</section>

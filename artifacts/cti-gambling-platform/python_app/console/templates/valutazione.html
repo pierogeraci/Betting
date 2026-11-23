@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Valutazione{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Valutazione</h1><p>Criterio di uscita della Fase 3: precisione e richiamo misurati sul set etichettato. I numeri si riportano come escono, anche quando peggiorano.</p></div>
+  {% if utente.ruolo == "amministratore" %}<div class="azioni">
+    <form method="post" action="/valutazione/entita">{{ csrf_campo(csrf) }}<button class="bottone" type="submit">Valuta le entità</button></form>
+    <form method="post" action="/valutazione/addestra">{{ csrf_campo(csrf) }}<button class="bottone primario" type="submit">Addestra e valuta il classificatore</button></form></div>{% endif %}</div>
+<div class="griglia c4">
+  <div class="scheda numero"><span class="etichetta">Esempi etichettati</span><span class="valore">{{ conteggi.values()|sum }}</span><span class="nota">{{ conteggi.get("telegram", 0) }} Telegram, solo per misurare</span></div>
+  <div class="scheda numero"><span class="etichetta">Classificatore attivo</span><span class="valore mono">{{ modello.metriche.motore if modello else "—" }}</span><span class="nota">{{ modello.versione if modello else "Non ancora addestrato" }}</span></div>
+  <div class="scheda numero"><span class="etichetta">Precisione</span><span class="valore">{{ modello.metriche.precisione if modello else "—" }}</span><span class="nota">su esempi tenuti da parte</span></div>
+  <div class="scheda numero"><span class="etichetta">Richiamo</span><span class="valore">{{ modello.metriche.richiamo if modello else "—" }}</span><span class="nota">{{ modello.metriche.esempi_valutazione if modello else 0 }} esempi di valutazione</span></div>
+</div>
+<section class="scheda"><header><h2>Storico delle valutazioni</h2></header>
+{% if righe %}<div class="tabella-contenitore"><table><thead><tr><th>Quando</th><th>Ambito</th><th>Versione</th><th class="num">Esempi</th><th class="num">Precisione</th><th class="num">Richiamo</th><th>Errori più utili</th></tr></thead><tbody>
+{% for v in righe %}<tr><td>{{ v.eseguita_il|quando }}</td><td>{{ v.ambito }}</td><td class="mono">{{ v.versione }}</td><td class="num">{{ v.esempi }}</td><td class="num">{{ v.misure.precisione }}</td><td class="num">{{ v.misure.richiamo }}</td>
+  <td>{% for err in v.errori[:3] %}<span class="secondario taglia">atteso {{ err.atteso }} · ottenuto {{ err.ottenuto }}{% if err.testo %} · {{ err.testo }}{% endif %}</span>{% endfor %}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<div class="vuoto"><h3>Nessuna valutazione ancora</h3><p>Etichetta qualche decina di elementi, poi avvia la valutazione. Da terminale: <span class="mono">make eval</span>.</p></div>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+<div id="avanzamento"{% if attivi %} hx-get="/siti/{{ sito.id }}/avanzamento?attivo=1" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %}>
+{% if attivi %}
+<section class="scheda"><header><h2>Analisi in corso</h2><span class="aiuto">Si aggiorna da sola</span></header>
+  <div class="corpo avanzamento">
+    {% for l in attivi %}
+    <div class="passo">{% if l.stato == "in_corso" %}<span class="giro" aria-hidden="true"></span>{% else %}<span class="punto" aria-hidden="true"></span>{% endif %}
+      <span>{{ TIPI_LAVORO.get(l.tipo, l.tipo) }}</span>
+      <span class="aiuto">{{ "in corso" if l.stato == "in_corso" else "in attesa" }}{% if l.tentativi > 1 %} · tentativo {{ l.tentativi }}{% endif %}</span></div>
+    {% endfor %}
+  </div></section>
+{% endif %}
+</div>

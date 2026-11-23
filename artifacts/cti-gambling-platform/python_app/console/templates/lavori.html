@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block titolo %}Lavori{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Lavori</h1><p>La coda che collega i moduli. I lavori di raccolta girano nel contenitore isolato; gli altri sulla rete interna.</p></div></div>
+<section class="scheda">
+  <div class="filtri"><div class="pastiglie">
+    <a class="pastiglia" href="/lavori"{% if not filtro %} aria-current="page"{% endif %}>Tutti</a>
+    {% for chiave in ["in_attesa", "in_corso", "completato", "fallito"] %}
+    <a class="pastiglia" href="/lavori?stato={{ chiave }}"{% if filtro == chiave %} aria-current="page"{% endif %}>{{ STATI[chiave][0] }} · {{ conteggi.get(chiave, 0) }}</a>{% endfor %}
+  </div></div>
+  {% include "parti/lavori_tabella.html" %}
+</section>
+{% endblock %}

@@ -1,0 +1,8 @@
+{%- set e = i.evidenza -%}
+{% if e.estratto %}<blockquote>{{ e.estratto }}</blockquote>{% endif %}
+<p class="dettagli">
+  {% if e.motivo %}{{ e.motivo }} · {% endif %}
+  {% if e.url %}<span class="mono">{{ e.url|truncate(70) }}</span> · {% endif %}
+  {% if e.snapshot_id %}<a href="/siti/{{ sito.id }}?scheda=snapshot&snapshot={{ e.snapshot_id }}">snapshot {{ e.snapshot_id }}</a> · {% endif %}
+  certezza {{ "%.0f"|format(i.certezza * 100) }}% · {{ i.collettore }} v{{ i.versione_collettore }}
+</p>

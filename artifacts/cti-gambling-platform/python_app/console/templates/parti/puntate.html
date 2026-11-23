@@ -1,0 +1,16 @@
+{% from "parti/macro.html" import csrf_campo %}
+<div class="griglia c21">
+<section class="scheda"><header><h2>Puntate</h2><span class="aiuto">{{ conteggio_puntate.get("osservata", 0) }} osservate · {{ conteggio_puntate.get("caricata", 0) }} caricate</span></header>
+  {% if lista_puntate %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Momento</th><th>Gioco</th><th class="num">Puntato</th><th class="num">Vinto</th><th>Valuta</th><th>Fonte</th></tr></thead><tbody>
+  {% for b in lista_puntate %}<tr><td>{{ b.momento|quando }}</td><td>{{ b.tipo_gioco or "—" }}</td><td class="num">{{ b.importo_puntato|float|round(2) }}</td><td class="num">{{ b.importo_vinto|float|round(2) }}</td><td>{{ b.valuta }}</td><td>{{ b.fonte }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><h3>Nessuna puntata</h3><p>Senza dati di puntata la minaccia non è determinabile e il Trust Index non si emette.</p></div>{% endif %}
+</section>
+<section class="scheda"><header><h2>Carica puntate</h2></header>
+  <form class="corpo" method="post" action="/siti/{{ sito.id }}/puntate" enctype="multipart/form-data">{{ csrf_campo(csrf) }}
+    <div class="campo"><div class="caricamento"><strong id="file-puntate">File CSV</strong>Colonne: importo_puntato, importo_vinto, valuta, momento, tipo_gioco
+      <input type="file" name="file" accept=".csv,text/csv" required data-file="#file-puntate" aria-label="File delle puntate"></div></div>
+    <div class="campo"><label><input type="checkbox" name="sostituisci" value="1"> Sostituisci le puntate caricate in precedenza</label></div>
+    <button class="bottone primario" type="submit">Carica e ricalcola</button>
+    <p class="aiuto">Solo importi, esiti, valute, date e tipo di gioco: nessun dato sui giocatori. I riquadri pubblici "ultime puntate" del sito sono letti in automatico, senza i nomi utente.</p>
+  </form></section>
+</div>

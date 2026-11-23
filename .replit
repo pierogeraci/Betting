@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
+modules = ["nodejs-24", "postgresql-16", "python-3.12"]
 
 [deployment]
 router = "application"
@@ -21,6 +21,7 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+packages = ["cacert", "freetype", "glibcLocales", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "libyaml", "openjpeg", "postgresql", "tcl", "tk", "zlib"]
 
 [objectStorage]
 defaultBucketID = "replit-objstore-f6027769-d93d-460d-a432-4573c2f2e9d8"

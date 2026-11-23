@@ -1,0 +1,80 @@
+{% from "parti/macro.html" import icona, csrf_campo %}
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf" content="{{ csrf }}">
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+  <title>{% block titolo %}Portale{% endblock %} · Softstrategy CTI</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<div class="guscio">
+  <nav class="laterale" aria-label="Sezioni">
+    <a class="marchio" href="/" aria-label="Softstrategy, portale CTI">
+      <img class="logo-softstrategy" src="/static/softstrategy-logo.svg" alt="Softstrategy">
+      <span class="marchio-sottotitolo">INTELLIGENCE OPERATIVA</span>
+    </a>
+    <a class="voce voce-home" href="/"{% if sezione == "cruscotto" %} aria-current="page"{% endif %}>{{ icona("cruscotto") }}<span>Cruscotto</span></a>
+    <div class="gruppo-voci"><span class="fase-numero">00</span> Fase 0 · Acquisizione</div>
+    {% for chiave, url, nome, ic in [("nuovo", "/nuovo", "Nuovo inserimento", "nuovo"), ("siti", "/siti", "Siti", "siti"), ("revisioni", "/revisioni", "Revisioni", "revisioni"), ("archivio", "/archivio", "Archivio", "archivio")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span>
+      {% if chiave == "revisioni" and revisioni %}<span class="conta">{{ revisioni }}</span>{% endif %}</a>
+    {% endfor %}
+    <div class="gruppo-voci"><span class="fase-numero">01</span> Fase 1 · Profilazione</div>
+    {% for chiave, url, nome, ic in [("siti", "/siti", "Siti e Trust Index", "siti"), ("adm", "/adm", "Elenchi ADM", "adm"), ("validazione", "/validazione", "Validazione", "validazione")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    <div class="gruppo-voci"><span class="fase-numero">02</span> Fase 2 · Raccolta</div>
+    {% for chiave, url, nome, ic in [("sonde", "/sonde", "Sonde", "sonde"), ("canali", "/canali", "Canali approvati", "canali"), ("parole", "/parole", "Parole chiave", "parole"), ("avvisi", "/avvisi", "Avvisi", "avvisi")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    <div class="gruppo-voci"><span class="fase-numero">03</span> Fase 3 · Analisi contenuti</div>
+    {% for chiave, url, nome, ic in [("ricerca", "/ricerca-contenuti", "Ricerca contenuti", "ricerca"), ("etichettatura", "/etichettatura", "Etichettatura", "etichettatura"), ("argomenti", "/argomenti", "Argomenti", "argomenti"), ("emoji", "/emoji", "Dizionario", "parole"), ("valutazione", "/valutazione", "Valutazione", "valutazione")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    <div class="gruppo-voci"><span class="fase-numero">04</span> Fase 4 · Indagine</div>
+    {% for chiave, url, nome, ic in [("app", "/app", "App Android", "app"), ("registri", "/registri", "Registri pubblici", "registri"), ("eventi", "/eventi", "Eventi sportivi", "eventi"), ("anomalie", "/anomalie", "Anomalie sintetiche", "anomalie")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    <div class="gruppo-voci">Sistema</div>
+    {% for chiave, url, nome, ic in [("lavori", "/lavori", "Lavori", "lavori"), ("profilo", "/profilo", "Profilo", "utenti")] %}
+    <a class="voce" href="{{ url }}"{% if sezione == chiave %} aria-current="page"{% endif %}>{{ icona(ic) }}<span>{{ nome }}</span></a>
+    {% endfor %}
+    {% if utente and utente.ruolo == "amministratore" %}
+    <div class="gruppo-voci">Amministrazione</div>
+    <a class="voce" href="/utenti"{% if sezione == "utenti" %} aria-current="page"{% endif %}>{{ icona("utenti") }}<span>Utenti</span></a>
+    {% endif %}
+    <div class="piede">
+      <a href="/profilo"><strong>{{ utente.nome or utente.nome_utente }}</strong></a>
+      <span class="ruolo-utente">{{ "Amministratore" if utente.ruolo == "amministratore" else "Analista" }}</span>
+    </div>
+  </nav>
+  <div class="principale">
+    <header class="barra">
+      <button class="bottone icona-sola solo-mobile" type="button" data-azione="menu" aria-label="Apri il menu">{{ icona("menu") }}</button>
+      <form class="cerca" action="/ricerca" method="get" role="search">
+        {{ icona("cerca") }}
+        <input type="search" name="q" placeholder="Cerca un dominio…" aria-label="Cerca un dominio" value="{{ q or '' }}">
+      </form>
+      <span class="spazio"></span>
+      <a class="bottone icona-sola campanella" href="/avvisi" aria-label="Avvisi{% if avvisi_nuovi %}: {{ avvisi_nuovi }} da leggere{% endif %}">{{ icona("avvisi") }}{% if avvisi_nuovi %}<span class="punto-avviso">{{ avvisi_nuovi if avvisi_nuovi < 100 else "99+" }}</span>{% endif %}</a>
+      <a class="bottone" href="/esporta/excel">{{ icona("scarica") }}<span>Esporta Excel</span></a>
+      <a class="bottone primario" href="/nuovo">{{ icona("nuovo") }}<span>Nuovo</span></a>
+      <button class="bottone icona-sola" type="button" data-azione="tema" aria-label="Cambia tema chiaro o scuro">{{ icona("tema") }}</button>
+      <form action="/uscita" method="post">{{ csrf_campo(csrf) }}
+        <button class="bottone icona-sola" type="submit" aria-label="Esci">{{ icona("esci") }}</button></form>
+    </header>
+    <main class="contenuto">
+      {% if avviso %}<div class="messaggio {{ avviso.tipo }}" role="status">{{ avviso.testo }}</div>{% endif %}
+      {% block contenuto %}{% endblock %}
+    </main>
+  </div>
+</div>
+</body>
+</html>

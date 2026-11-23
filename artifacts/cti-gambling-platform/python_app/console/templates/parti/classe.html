@@ -1,0 +1,4 @@
+{%- set cl = punteggio.classe_rischio -%}
+{%- if cl -%}<span class="etichetta-stato {{ {'alto': 'danger', 'medio': 'warn', 'basso': 'ok'}[cl] }}" title="Trust Index {{ '%.2f'|format(punteggio.trust_index) }} · regole {{ punteggio.versione_regole }}">Rischio {{ cl }} · {{ '%.2f'|format(punteggio.trust_index)|replace('.', ',') }}</span>
+{%- elif punteggio.dettaglio.esclusione and punteggio.dettaglio.esclusione.startswith("Concessionario") -%}<span class="etichetta-stato ok">Escluso: concessionario</span>
+{%- else -%}<span class="etichetta-stato neutral" title="{{ punteggio.dettaglio.esclusione }}">Senza indice{% if punteggio.livello_vulnerabilita %} · V {{ punteggio.livello_vulnerabilita }}{% endif %}</span>{%- endif -%}

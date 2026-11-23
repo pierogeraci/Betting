@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, csrf_campo, icona %}
+{% block titolo %}{{ sito.dominio }}{% endblock %}
+{% macro evidenza_adm(i) %}
+<div class="evidenza">
+  <div class="riga tra"><strong>{{ "Elenco dei concessionari" if i.codice == "dominio_concessionario_adm" else "Elenco dei siti inibiti" if i.codice == "dominio_inibito_adm" else i.codice }}</strong>
+    {% if i.codice == "dominio_concessionario_adm" %}
+      <span class="etichetta-stato {{ 'ok' if i.valore == 'presente' else 'neutral' if i.valore == 'assente' else 'warn' }}">{{ STATI[i.valore][0] }}</span>
+    {% else %}{{ stato(i.valore) }}{% endif %}</div>
+  {% set e = i.evidenza %}
+  {% if i.valore == "presente" %}
+    <blockquote>{{ e.estratto }}</blockquote>
+    <p class="dettagli">Riga {{ e.riga }} · {{ e.corrispondenza }} (<span class="mono">{{ e.dominio_in_elenco }}</span>)
+      {% if e.numero_concessione %} · concessione {{ e.numero_concessione }}{% endif %}{% if e.ragione_sociale %} · {{ e.ragione_sociale }}{% endif %}</p>
+  {% elif i.valore == "assente" %}
+    <p class="dettagli">L'elenco è stato letto per intero: nessuna riga corrisponde a {{ e.domini|join(", ") }}.</p>
+  {% else %}
+    <p class="dettagli">{{ e.motivo or "Dato non leggibile" }}. Non determinabile non vale assente.</p>
+  {% endif %}
+  <p class="dettagli">{% if e.versione_elenco %}Elenco versione {{ e.versione_elenco }} · <span class="mono" title="{{ e.elenco_sha256 }}">sha256 {{ e.elenco_sha256|breve }}</span> · {% endif %}
+    certezza {{ "%.0f"|format(i.certezza * 100) }}% · {{ i.collettore }} v{{ i.versione_collettore }} · {{ i.rilevato_il|quando }}</p>
+</div>
+{% endmacro %}
+{% block contenuto %}
+<div class="testata">
+  <div><div class="riga"><h1>{{ sito.dominio }}</h1>{{ stato(sito.esito_adm, ESITI_ADM, grande=True) }}</div>
+    <p>Primo avvistamento {{ sito.primo_avvistamento|quando }} · {{ snaps|length }} snapshot</p></div>
+  <div class="azioni">
+    {% if punteggio %}{% include "parti/classe.html" %}{% endif %}
+    <a class="bottone" href="/siti/{{ sito.id }}/report">Report</a>
+    <form method="post" action="/siti/{{ sito.id }}/profila">{{ csrf_campo(csrf) }}
+      <button class="bottone" type="submit">Riprofila</button></form>
+    <form method="post" action="/siti/{{ sito.id }}/snapshot">{{ csrf_campo(csrf) }}
+      <button class="bottone" type="submit"{% if attivi %} disabled{% endif %}>{{ icona("aggiorna") }} Nuovo snapshot</button></form>
+  </div>
+</div>
+
+{% include "parti/avanzamento.html" %}
+
+<nav class="linguette" aria-label="Schede del sito">
+  {% for chiave, nome in [("panoramica", "Panoramica"), ("profilazione", "Profilazione"), ("trust", "Trust Index"), ("puntate", "Puntate"), ("gemelli", "Gemelli" ~ (" · " ~ gemelli|length if gemelli else "")), ("legal", "Legal entity"), ("grafo", "Grafo"), ("snapshot", "Snapshot"), ("traffico", "Traffico"), ("sorgente", "Sorgente"), ("origine", "Origine"), ("lavori", "Lavori")] %}
+  <a class="linguetta" href="/siti/{{ sito.id }}?scheda={{ chiave }}{% if snap %}&snapshot={{ snap.id }}{% endif %}"{% if scheda == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>
+  {% endfor %}
+</nav>
+
+{% if scheda == "panoramica" %}
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Ultima schermata</h2>{% if snap %}<span class="aiuto">{{ snap.raccolto_il|quando }}</span>{% endif %}</header>
+    <div class="corpo">
+    {% if snap and snap.schermata_chiave %}
+      <div class="schermata-cornice"><img src="/snapshot/{{ snap.id }}/schermata" alt="Schermata della pagina {{ snap.url_finale or snap.url_richiesto }}"></div>
+    {% elif snap %}
+      <div class="messaggio {{ 'avviso' if snap.stato == 'bloccato' else 'errore' }}">La pagina non è stata letta: {{ MOTIVI.get(snap.motivo, snap.motivo) or snap.errore or "errore sconosciuto" }}.</div>
+    {% else %}
+      <div class="vuoto"><h3>Nessuno snapshot ancora</h3><p>Lo snapshot arriva quando il contenitore di raccolta ha letto la pagina.</p></div>
+    {% endif %}
+    </div></section>
+  <div class="pila">
+    <section class="scheda"><header><h2>Confronto con gli elenchi ADM</h2></header>
+      <div class="corpo pila">
+        {% set adm = indicatori|selectattr("collettore", "equalto", "elenchi_adm")|list %}
+        {% for i in adm %}{{ evidenza_adm(i) }}{% else %}<p class="aiuto">Confronto non ancora eseguito.</p>{% endfor %}
+      </div></section>
+    {% if snap %}
+    <section class="scheda"><header><h2>Pagina letta</h2>{{ stato(snap.stato) }}</header>
+      <div class="corpo"><dl class="fatti">
+        <dt>URL richiesto</dt><dd class="mono">{{ snap.url_richiesto }}</dd>
+        {% if snap.url_finale and snap.url_finale != snap.url_richiesto %}<dt>URL finale</dt><dd class="mono">{{ snap.url_finale }}</dd>{% endif %}
+        {% if snap.titolo %}<dt>Titolo</dt><dd>{{ snap.titolo }}</dd>{% endif %}
+        {% if snap.codice_http %}<dt>Risposta</dt><dd>HTTP {{ snap.codice_http }}</dd>{% endif %}
+        {% if snap.motivo %}<dt>Blocco</dt><dd>{{ MOTIVI.get(snap.motivo, snap.motivo) }}</dd>{% endif %}
+        {% if snap.errore %}<dt>Errore</dt><dd class="mono">{{ snap.errore }}</dd>{% endif %}
+      </dl></div></section>
+    {% endif %}
+  </div>
+</div>
+
+{% elif scheda == "profilazione" %}{% include "parti/profilazione.html" %}
+{% elif scheda == "trust" %}{% include "parti/trust.html" %}
+{% elif scheda == "puntate" %}{% include "parti/puntate.html" %}
+{% elif scheda == "gemelli" %}{% include "parti/gemelli.html" %}
+{% elif scheda == "legal" %}{% include "parti/legal.html" %}
+{% elif scheda == "grafo" %}{% include "parti/grafo.html" %}
+{% elif scheda == "snapshot" %}
+{% if snap %}
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Snapshot del {{ snap.raccolto_il|quando }}</h2>{{ stato(snap.stato) }}</header>
+    <div class="corpo pila">
+      {% if snap.schermata_chiave %}<div class="schermata-cornice"><img src="/snapshot/{{ snap.id }}/schermata" alt="Schermata dello snapshot"></div>{% endif %}
+      <dl class="fatti">
+        <dt>URL richiesto</dt><dd class="mono">{{ snap.url_richiesto }}</dd>
+        <dt>URL finale</dt><dd class="mono">{{ snap.url_finale or "—" }}</dd>
+        <dt>Risposta</dt><dd>{{ "HTTP " ~ snap.codice_http if snap.codice_http else "—" }}</dd>
+        {% if snap.motivo %}<dt>Blocco</dt><dd>{{ MOTIVI.get(snap.motivo, snap.motivo) }}{% if snap.metadati.estratto_blocco %} · <span class="mono">{{ snap.metadati.estratto_blocco }}</span>{% endif %}</dd>{% endif %}
+        {% if snap.errore %}<dt>Errore</dt><dd class="mono">{{ snap.errore }}</dd>{% endif %}
+        <dt>Raccolto il</dt><dd>{{ snap.raccolto_il.strftime("%Y-%m-%d %H:%M:%S") }} UTC</dd>
+        <dt>Strumento</dt><dd>{{ snap.strumento }} {{ snap.versione_strumento }}</dd>
+        <dt>Browser dichiarato</dt><dd class="mono">{{ snap.metadati.user_agent or "—" }}</dd>
+        <dt>Hash dello snapshot</dt><dd class="mono">{{ snap.sha256 }}</dd>
+        {% if snap.html_sha256 %}<dt>Hash HTML</dt><dd class="mono">{{ snap.html_sha256 }}</dd>{% endif %}
+        {% if snap.schermata_sha256 %}<dt>Hash schermata</dt><dd class="mono">{{ snap.schermata_sha256 }}</dd>{% endif %}
+        {% if snap.traffico_sha256 %}<dt>Hash traffico</dt><dd class="mono">{{ snap.traffico_sha256 }}</dd>{% endif %}
+      </dl>
+      {% if snap.metadati.rete_intercettata %}<div class="messaggio avviso">Raccolto dietro un proxy che sostituisce i certificati: le evidenze sul certificato TLS di questo snapshot non sono valide.</div>{% endif %}
+      {% if snap.metadati.richieste_bloccate %}<div class="messaggio info">La pagina ha tentato {{ snap.metadati.richieste_bloccate }} richieste verso indirizzi interni: sono state interrotte.</div>{% endif %}
+      <div class="riga">
+        {% if snap.schermata_chiave %}<a class="bottone piccolo" href="/snapshot/{{ snap.id }}/file/schermata">{{ icona("scarica") }} Schermata</a>{% endif %}
+        {% if snap.html_chiave %}<a class="bottone piccolo" href="/snapshot/{{ snap.id }}/file/html">{{ icona("scarica") }} HTML come testo</a>{% endif %}
+        {% if snap.traffico_chiave %}<a class="bottone piccolo" href="/snapshot/{{ snap.id }}/file/traffico">{{ icona("scarica") }} Traffico</a>{% endif %}
+      </div>
+    </div></section>
+  <div class="pila">
+    <section class="scheda"><header><h2>Reindirizzamenti</h2></header><div class="corpo">
+      {% if snap.reindirizzamenti %}<ol class="catena">{% for passo in snap.reindirizzamenti %}
+        <li><span class="codice">{{ passo.codice or "—" }}</span><span class="mono">{{ passo.url }}</span></li>{% endfor %}</ol>
+      {% else %}<p class="aiuto">Nessun reindirizzamento registrato.</p>{% endif %}</div></section>
+    <section class="scheda"><header><h2>Storico</h2></header><div class="corpo stretto tabella-contenitore"><table><tbody>
+      {% for s in snaps %}<tr><td><a href="/siti/{{ sito.id }}?scheda=snapshot&snapshot={{ s.id }}">{{ s.raccolto_il|quando }}</a></td><td>{{ stato(s.stato) }}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+  </div>
+</div>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Nessuno snapshot ancora</h3><p>Compare qui appena la raccolta ha finito.</p></div></div>{% endif %}
+
+{% elif scheda == "traffico" %}
+{% if traffico and traffico.totale %}
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Richieste</h2><span class="aiuto">{{ traffico.totale }} registrate{% if traffico.totale > 300 %}, mostrate le prime 300{% endif %}</span></header>
+    <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Metodo</th><th>Indirizzo</th><th>Codice</th><th>Tipo</th></tr></thead><tbody>
+    {% for r in traffico.richieste %}<tr><td class="mono">{{ r.metodo }}</td><td><span class="taglia mono" title="{{ r.url }}">{{ r.url }}</span></td><td>{{ r.codice or "—" }}</td><td>{{ r.tipo or "—" }}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+  <section class="scheda"><header><h2>Domini contattati</h2></header>
+    <div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Dominio</th><th class="num">Richieste</th></tr></thead><tbody>
+    {% for d in traffico.domini %}<tr><td><span class="mono">{{ d.host or "—" }}</span>{% if d.terza_parte %} <span class="etichetta-stato info">Terza parte</span>{% endif %}</td><td class="num">{{ d.richieste }}</td></tr>{% endfor %}
+    </tbody></table></div></section>
+</div>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Nessun traffico registrato</h3><p>Il traffico c'è solo per gli snapshot in cui la pagina ha risposto.</p></div></div>{% endif %}
+
+{% elif scheda == "sorgente" %}
+{% if sorgente is defined %}
+<section class="scheda" data-schede>
+  <header><h2>HTML archiviato</h2>
+    <div class="riga" role="tablist">
+      <button class="linguetta" type="button" role="tab" data-azione="scheda" data-mostra="testo" aria-selected="true">Sorgente</button>
+      <button class="linguetta" type="button" role="tab" data-azione="scheda" data-mostra="isolato" aria-selected="false">Riquadro isolato</button>
+    </div></header>
+  <div data-pannello="testo">
+    {% if sorgente_troncata %}<div class="corpo"><div class="messaggio info">Mostrati i primi 400 kB: scarica il file per il testo completo.</div></div>{% endif %}
+    <pre class="sorgente">{{ sorgente }}</pre></div>
+  <div class="corpo pila" data-pannello="isolato" hidden>
+    <div class="messaggio info">La pagina archiviata è mostrata senza script, senza moduli attivi e senza risorse esterne: il tuo browser non contatta il sito.</div>
+    <iframe class="isolato" sandbox="" src="/snapshot/{{ snap.id }}/isolato" title="Pagina archiviata, isolata" loading="lazy" referrerpolicy="no-referrer"></iframe>
+  </div>
+</section>
+{% else %}<div class="scheda"><div class="vuoto"><h3>Nessun HTML archiviato</h3><p>La pagina non ha risposto o non è ancora stata letta.</p></div></div>{% endif %}
+
+{% elif scheda == "origine" %}
+<section class="scheda"><header><h2>Da dove arriva questo sito</h2></header>
+  {% if origini %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Fonte</th><th>Riferimento</th><th>Raccolto il</th><th>Inserito da</th><th>Hash</th></tr></thead><tbody>
+  {% for e in origini %}<tr><td>{{ e.fonte }}</td><td><a class="taglia mono" href="/archivio/{{ e.id }}">{{ e.riferimento }}</a></td><td>{{ e.raccolto_il|quando }}</td>
+    <td>{{ e.autore.nome_utente if e.autore else "—" }}</td><td class="mono" title="{{ e.sha256 }}">{{ e.sha256|breve }}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><p>Nessun elemento grezzo collegato.</p></div>{% endif %}
+</section>
+
+{% elif scheda == "lavori" %}
+<section class="scheda"><header><h2>Lavori su questo sito</h2></header>
+  {% if lavori %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>N.</th><th>Lavoro</th><th>Stato</th><th>Creato</th><th>Esito</th></tr></thead><tbody>
+  {% for l in lavori %}<tr><td class="mono">{{ l.id }}</td><td>{{ TIPI_LAVORO.get(l.tipo, l.tipo) }}</td><td>{{ stato(l.stato) }}</td><td>{{ l.creato_il|quando }}</td>
+    <td>{% if l.errore %}<span class="taglia mono" title="{{ l.errore }}">{{ l.errore }}</span>{% else %}<span class="secondario">{{ l.risultato.esito or l.risultato.esito_adm or l.risultato.stato or "" }}</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="vuoto"><p>Nessun lavoro.</p></div>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

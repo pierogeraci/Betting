@@ -1,0 +1,16 @@
+{% from "parti/macro.html" import stato %}
+<div id="esito-ricerca" class="pila">
+{% if not dominio.strip() %}
+{% elif not host %}<div class="messaggio errore">"{{ dominio }}" non è un nome di dominio valido.</div>
+{% else %}
+  <div class="riga"><strong class="mono">{{ host }}</strong>{{ stato(sintesi, ESITI_ADM) }}</div>
+  {% for tipo, r in risultati.items() %}
+  <div class="evidenza"><div class="riga tra"><strong>{{ etichette[tipo] }}</strong>
+    <span class="etichetta-stato {{ 'warn' if r.value == 'non_determinabile' else ('ok' if (r.value == 'presente') == (tipo == 'concessionari') else ('danger' if r.value == 'presente' else 'neutral')) }}">{{ STATI[r.value][0] }}</span></div>
+    {% if r.value == "presente" %}<blockquote>{{ r.evidence.estratto }}</blockquote>
+      <p class="dettagli">Riga {{ r.evidence.riga }} · {{ r.evidence.corrispondenza }} · certezza {{ "%.0f"|format(r.certainty * 100) }}%</p>
+    {% elif r.value == "assente" %}<p class="dettagli">Nessuna riga corrispondente nella versione {{ r.evidence.versione_elenco }}.</p>
+    {% else %}<p class="dettagli">{{ r.evidence.motivo }}.</p>{% endif %}
+  </div>{% endfor %}
+{% endif %}
+</div>

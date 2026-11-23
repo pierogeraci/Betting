@@ -1,0 +1,5 @@
+{% if utente %}{% extends "base.html" %}{% block titolo %}{{ titolo }}{% endblock %}
+{% block contenuto %}
+<div class="scheda"><div class="vuoto"><h3>{{ titolo }}</h3><p>{{ dettaglio }}</p><a class="bottone" href="/">Torna al cruscotto</a></div></div>
+{% endblock %}{% else %}<!doctype html><html lang="it"><head><meta charset="utf-8"><title>{{ titolo }}</title><link rel="stylesheet" href="/static/app.css"></head>
+<body><main class="accesso"><div class="scheda"><div class="vuoto"><h3>{{ titolo }}</h3><p>{{ dettaglio }}</p><a class="bottone" href="/">Vai al portale</a></div></div></main></body></html>{% endif %}

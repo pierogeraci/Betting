@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo %}
+{% block titolo %}Dizionario dei simboli{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Dizionario dei simboli</h1><p>Significati riconosciuti nel contesto delle pubblicità di gioco, anche diversi per piattaforma. L'analisi sostituisce il carattere con il suo significato prima di cercare parole chiave ed entità.</p></div></div>
+{% if utente.ruolo == "amministratore" %}<section class="scheda"><header><h2>Aggiungi o modifica</h2></header>
+  <form class="corpo riga" method="post" action="/emoji">{{ csrf_campo(csrf) }}
+    <input type="text" name="carattere" placeholder="Carattere Unicode" aria-label="Carattere Unicode" required>
+    <input type="text" name="piattaforma" placeholder="piattaforma (vuoto = tutte)" aria-label="Piattaforma">
+    <input type="text" name="significato" placeholder="significato nel contesto" aria-label="Significato" required>
+    <input type="text" name="categoria" placeholder="categoria" aria-label="Categoria">
+    <button class="bottone primario" type="submit">Salva</button></form></section>{% endif %}
+<section class="scheda"><div class="tabella-contenitore"><table><thead><tr><th>Emoji</th><th>Piattaforma</th><th>Significato</th><th>Categoria</th><th class="num">Occorrenze</th></tr></thead><tbody>
+{% for r in righe %}<tr><td class="mono">{{ r.carattere|urlencode }}</td><td>{{ r.piattaforma or "tutte" }}</td><td>{{ r.significato }}</td><td>{{ r.categoria }}</td><td class="num">{{ r.occorrenze }}</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% endblock %}

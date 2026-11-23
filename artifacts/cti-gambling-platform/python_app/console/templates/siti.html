@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block titolo %}Siti{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Siti</h1><p>Ogni sito è un dominio registrabile. L'esito ADM viene dal confronto con gli elenchi, non dal testo del sito.</p></div></div>
+<section class="scheda">
+  <form class="filtri" action="/siti" method="get" hx-get="/siti" hx-target="#tabella-siti" hx-swap="outerHTML" hx-trigger="input changed delay:300ms from:#filtro-q, change from:#filtro-esito, change from:#filtro-classe" hx-push-url="true">
+    <input id="filtro-q" type="search" name="q" value="{{ q }}" placeholder="Filtra per dominio" aria-label="Filtra per dominio">
+    <select id="filtro-esito" name="esito" aria-label="Esito ADM">
+      <option value="">Tutti gli esiti ADM</option>
+      {% for chiave, coppia in ESITI_ADM.items() %}<option value="{{ chiave }}"{% if esito == chiave %} selected{% endif %}>{{ coppia[0] }}</option>{% endfor %}
+    </select>
+    <select id="filtro-classe" name="classe" aria-label="Classe di rischio">
+      <option value="">Tutte le classi</option>
+      {% for chiave, nome in [("alto", "Rischio alto"), ("medio", "Rischio medio"), ("basso", "Rischio basso"), ("nessun_indice", "Senza indice")] %}<option value="{{ chiave }}"{% if classe == chiave %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+    </select>
+    {% if gruppo %}<input type="hidden" name="gruppo" value="{{ gruppo }}"><a class="pastiglia" aria-current="page" href="/siti">Gruppo {{ gruppo }} · rimuovi filtro</a>{% endif %}
+    <noscript><button class="bottone" type="submit">Filtra</button></noscript>
+  </form>
+  {% include "parti/siti_tabella.html" %}
+</section>
+{% endblock %}

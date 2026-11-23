@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, csrf_campo %}
+{% block titolo %}Revisione {{ r.id }}{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><div class="riga"><h1>{{ r.sito.dominio if r.sito else "Revisione" }}</h1>{{ stato(r.stato, grande=True) }}</div>
+  <p>{{ r.motivo }}</p></div>
+  <div class="azioni">{% if r.sito %}<a class="bottone" href="/siti/{{ r.sito.id }}">Apri la scheda del sito</a>{% endif %}
+    {% if r.stato == "aperta" %}<form method="post" action="/revisioni/{{ r.id }}/prendi">{{ csrf_campo(csrf) }}<button class="bottone primario" type="submit">Prendi in carico</button></form>{% endif %}</div>
+</div>
+<div class="griglia c21">
+  <section class="scheda"><header><h2>Cosa ha visto il sistema</h2></header><div class="corpo pila">
+    {% if r.snapshot and r.snapshot.schermata_chiave %}<div class="schermata-cornice"><img src="/snapshot/{{ r.snapshot.id }}/schermata" alt="Schermata della pagina bloccata"></div>{% endif %}
+    {% if r.snapshot %}<dl class="fatti">
+      <dt>URL</dt><dd class="mono">{{ r.snapshot.url_richiesto }}</dd>
+      <dt>Blocco</dt><dd>{{ MOTIVI.get(r.snapshot.motivo, r.snapshot.motivo) }}</dd>
+      <dt>Risposta</dt><dd>{{ "HTTP " ~ r.snapshot.codice_http if r.snapshot.codice_http else "—" }}</dd>
+      {% if r.snapshot.metadati.estratto_blocco %}<dt>Estratto</dt><dd class="mono">{{ r.snapshot.metadati.estratto_blocco }}</dd>{% endif %}
+      <dt>Raccolto il</dt><dd>{{ r.snapshot.raccolto_il|quando }}</dd></dl>{% endif %}
+  </div></section>
+  <section class="scheda"><header><h2>{{ "Esito" if r.stato == "chiusa" else "Chiudi la revisione" }}</h2></header><div class="corpo">
+    {% if r.stato == "chiusa" %}
+      <dl class="fatti"><dt>Esito</dt><dd>{{ esiti.get(r.esito, r.esito) }}</dd><dt>Note</dt><dd>{{ r.note }}</dd><dt>Chiusa il</dt><dd>{{ r.chiusa_il|quando }}</dd></dl>
+    {% else %}
+    <form method="post" action="/revisioni/{{ r.id }}/chiudi">{{ csrf_campo(csrf) }}
+      {% if errore %}<div class="messaggio errore campo" role="alert">{{ errore }}</div>{% endif %}
+      <div class="campo"><label for="esito">Esito</label><select id="esito" name="esito" required>
+        <option value="">Scegli…</option>{% for chiave, testo in esiti.items() %}<option value="{{ chiave }}"{% if esito == chiave %} selected{% endif %}>{{ testo }}</option>{% endfor %}</select></div>
+      <div class="campo"><label for="note">Note</label><textarea id="note" name="note" required>{{ note or '' }}</textarea>
+        <p class="aiuto">Scrivi cosa hai verificato a mano e come.</p></div>
+      <button class="bottone primario" type="submit">Chiudi la revisione</button>
+    </form>{% endif %}
+  </div></section>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato %}
+{% block titolo %}Validazione{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Validazione del Trust Index</h1><p>Confronto tra la classe calcolata e il giudizio dell'analista. Criterio di uscita della Fase 1: {{ obiettivo }} siti valutati.</p></div></div>
+<div class="griglia c4">
+  <div class="scheda numero"><span class="etichetta">Siti giudicati</span><span class="valore">{{ righe|length }}</span><span class="nota">Obiettivo {{ obiettivo }}</span>
+    {% from "parti/macro.html" import ripartizione %}{{ ripartizione([("ok", [righe|length, obiettivo]|min)], obiettivo) }}</div>
+  <div class="scheda numero"><span class="etichetta">Concordanza</span><span class="valore">{{ ("%.0f"|format(concordi * 100 / confrontabili) ~ "%") if confrontabili else "—" }}</span><span class="nota">{{ concordi }} su {{ confrontabili }} con indice</span></div>
+  <div class="scheda numero"><span class="etichetta">Senza indice</span><span class="valore">{{ senza_indice }}</span><span class="nota">Copertura bassa o puntate mancanti</span></div>
+  <div class="scheda numero"><span class="etichetta">Regole</span><span class="valore mono">{{ regole.version }}</span><span class="nota">{{ "Pesi validati" if regole.pesi_validati else "Pesi non ancora validati" }}</span></div>
+</div>
+<section class="scheda"><header><h2>Matrice di confusione</h2><span class="aiuto">Righe: analista · colonne: sistema</span></header>
+  <div class="corpo stretto tabella-contenitore"><table><thead><tr><th></th>{% for c in classi_auto %}<th class="num">{{ c.replace("_", " ") }}</th>{% endfor %}</tr></thead><tbody>
+  {% for a in classi_analista %}<tr><td><strong>{{ CLASSI_ANALISTA[a] }}</strong></td>{% for c in classi_auto %}<td class="num">{% set n = matrice.get((a, c), 0) %}{% if n %}<strong>{{ n }}</strong>{% else %}<span class="secondario">0</span>{% endif %}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table></div></section>
+<section class="scheda"><header><h2>Siti giudicati</h2></header>
+  {% if righe %}<div class="corpo stretto tabella-contenitore"><table><thead><tr><th>Sito</th><th>Analista</th><th>Sistema</th><th>Esito</th><th>Motivazione</th></tr></thead><tbody>
+  {% for r in righe %}<tr><td><a href="/siti/{{ r.sito.id }}?scheda=trust"><strong>{{ r.sito.dominio }}</strong></a></td><td>{{ CLASSI_ANALISTA.get(r.analista) }}</td>
+    <td>{{ r.automatica.replace("_", " ") }}</td>
+    <td>{% if r.automatica in ("nessun_indice", "nessun_punteggio") %}<span class="etichetta-stato neutral">Non confrontabile</span>{% elif r.concorda %}<span class="etichetta-stato ok">Concorda</span>{% else %}<span class="etichetta-stato danger">Discorda</span>{% endif %}</td>
+    <td><span class="taglia">{{ r.giudizio.note }}</span></td></tr>{% endfor %}
+  </tbody></table></div>
+  {% else %}<div class="vuoto"><h3>Nessun giudizio ancora</h3><p>Apri un sito, scheda Trust Index, e registra il tuo giudizio.</p><a class="bottone primario" href="/siti">Vai ai siti</a></div>{% endif %}
+</section>
+<div class="messaggio info">I pesi non si cambiano per far tornare la concordanza su pochi casi: un disaccordo ricorrente va discusso e, se serve, porta a una nuova versione delle regole.</div>
+{% endblock %}

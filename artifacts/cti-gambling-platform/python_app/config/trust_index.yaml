@@ -1,0 +1,74 @@
+# Trust Index secondo la matrice del dossier, foglio v0.5
+# (Risk_matrix_gambling_online_v0.5.xlsx). Unica fonte di pesi e soglie:
+# il codice in scoring/ non contiene numeri scritti a mano.
+version: "dossier-0.5.1"
+fonte: "Risk_matrix_gambling_online_v0.5.xlsx, fogli Calcolo Vulnerabilità, Calcolo Minaccia, Matrice_Trust_Index"
+# I pesi sono quelli del foglio, fissati a giudizio: non ancora validati sul campione dell'analista.
+pesi_validati: false
+
+vulnerabilita:
+  # Somma dei pesi delle voci presenti.
+  voci:
+    piu_account_per_conto: {peso: 1.5, nome: "Collegamento di più account a un unico conto utente"}
+    pagamento_conto_ue: {peso: 1, nome: "Pagamento mediante c/c bancario UE"}
+    assenza_registrazione: {peso: 2.5, nome: "Assenza di registrazione"}
+    assenza_documento: {peso: 3, nome: "Assenza di iscrizione mediante documenti di riconoscimento"}
+    pagamento_terze_parti: {peso: 2, nome: "Pagamento mediante provider terze parti"}
+    pagamento_criptovalute: {peso: 6, nome: "Pagamento e piazzamento mediante criptovalute"}
+    pagamento_offshore: {peso: 5, nome: "Pagamento c/c offshore"}
+  # Livello: il primo la cui soglia "sotto" supera il punteggio; l'ultimo non ha soglia.
+  livelli:
+    - {livello: basso, sotto: 6}
+    - {livello: medio, sotto: 12}
+    - {livello: alto}
+  # Quota minima di voci determinate per emettere il livello di vulnerabilità.
+  copertura_minima: 0.6
+
+minaccia:
+  finestra_ore: 24
+  # Numero minimo di puntate nella finestra per calcolare la minaccia.
+  puntate_minime: 5
+  valuta: EUR
+  variabili:
+    profilo_rischio:
+      nome: "V1 Profilo di rischio"
+      formula: "Totale scommesso / numero di puntate, arrotondato per eccesso"
+      soglie: [50, 250]
+    rendimento_lordo:
+      nome: "V2 Rendimento totale lordo"
+      formula: "Somma delle vincite"
+      soglie: [1000, 5000]
+    percentuale_vincite:
+      nome: "V3 % vincite realizzate"
+      formula: "Numero di vittorie / numero di puntate"
+      # Correzione dichiarata: nel foglio la condizione del livello medio è impossibile.
+      soglie: [0.25, 0.5]
+  # Ogni variabile vale 1, 2 o 3 secondo le soglie (sotto la prima, sotto la seconda, oltre).
+  # Minaccia = media dei tre voti arrotondata per eccesso, moltiplicata per 3.
+  moltiplicatore: 3
+  livelli:
+    - {livello: basso, sotto: 4}
+    - {livello: medio, sotto: 7}
+    - {livello: alto}
+
+trust_index:
+  # Indice = (vulnerabilità + minaccia) / 2, come nel foglio Matrice_Trust_Index.
+  divisore: 2
+  # Nel foglio: basso sotto 4, medio da 4 a 7 compreso, alto oltre 7.
+  livelli:
+    - {livello: basso, sotto: 4}
+    - {livello: medio, fino_a: 7}
+    - {livello: alto}
+
+# Tassi di cambio verso l'euro per i dati di puntata in altre valute.
+# Una puntata in una valuta senza tasso è esclusa e abbassa la copertura.
+tassi_eur:
+  EUR: 1
+  USD: 0.92
+  GBP: 1.17
+
+regole:
+  # Un concessionario ADM non riceve alcuna valutazione di illegalità.
+  escludi_concessionari: true
+  # Logo o numero di concessione ADM esposti senza comparire nell'elenco: segnalazione immediata.
+  segnala_adm_senza_titolo: true

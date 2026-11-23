@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import csrf_campo, paginazione %}
+{% block titolo %}Avvisi{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Avvisi</h1><p>Messaggi con parole chiave segnalate, canali nuovi da approvare, attese chieste dai servizi.</p></div>
+  <div class="azioni"><a class="pastiglia" href="/avvisi{{ '' if tutti else '?tutti=1' }}">{{ "Solo da leggere" if tutti else "Mostra anche i letti" }}</a>
+    <form method="post" action="/avvisi/letti">{{ csrf_campo(csrf) }}<button class="bottone" type="submit">Segna tutti come letti</button></form></div></div>
+<section class="scheda">
+{% if righe %}<div class="tabella-contenitore"><table><thead><tr><th>Avviso</th><th>Quando</th><th></th></tr></thead><tbody>
+{% for a in righe %}<tr><td><strong>{{ a.titolo }}</strong>{% if a.testo %}<span class="secondario taglia" title="{{ a.testo }}">{{ a.testo }}</span>{% endif %}</td><td>{{ a.creato_il|quando }}</td>
+  <td><div class="riga">{% if a.elemento_grezzo_id %}<a class="bottone piccolo" href="/archivio/{{ a.elemento_grezzo_id }}">Apri</a>{% endif %}
+    {% if a.canale_id %}<a class="bottone piccolo" href="/canali">Canali</a>{% endif %}{% if a.sito_id %}<a class="bottone piccolo" href="/siti/{{ a.sito_id }}">Sito</a>{% endif %}
+    {% if not a.letto %}<form method="post" action="/avvisi/letti">{{ csrf_campo(csrf) }}<input type="hidden" name="ids" value="{{ a.id }}"><button class="bottone piccolo" type="submit">Letto</button></form>{% endif %}</div></td></tr>{% endfor %}
+</tbody></table></div>{{ paginazione(pag, "/avvisi?tutti=" ~ tutti ~ "&") }}
+{% else %}<div class="vuoto"><h3>Nessun avviso da leggere</h3><p>Le sonde segnalano qui ciò che richiede la tua attenzione.</p></div>{% endif %}
+</section>
+{% endblock %}

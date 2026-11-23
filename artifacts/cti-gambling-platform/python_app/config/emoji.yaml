@@ -1,0 +1,36 @@
+# Dizionario delle emoji usate nelle pubblicità di gioco, con il significato nel
+# contesto e, dove cambia, il significato per piattaforma (relazione tecnica,
+# "Analisi di emoticons ed emoji"). Modificabile dal portale, pagina Emoji.
+version: "1"
+emoji:
+  "💰": {significato: "soldi vinta", categoria: vincita}
+  "💵": {significato: "soldi contanti", categoria: vincita}
+  "💸": {significato: "soldi vinta prelievo", categoria: vincita}
+  "🤑": {significato: "vincita soldi", categoria: vincita}
+  "🎆": {significato: "vincita festa", categoria: vincita}
+  "🎉": {significato: "vincita festa", categoria: vincita}
+  "🏆": {significato: "vincita premio", categoria: vincita}
+  "💎": {significato: "vip premio", categoria: vincita}
+  "⚽": {significato: "scommesse calcio", categoria: sport}
+  "⚽️": {significato: "scommesse calcio", categoria: sport}
+  "🏀": {significato: "scommesse basket", categoria: sport}
+  "🎾": {significato: "scommesse tennis", categoria: sport}
+  "🏇": {significato: "scommesse ippica corse dei cavalli", categoria: sport}
+  "🐎": {significato: "scommesse ippica corse dei cavalli", categoria: sport}
+  "🐕": {significato: "scommesse levrieri", categoria: sport, piattaforme: {telegram: "scommesse corse dei levrieri"}}
+  "🎰": {significato: "slot casino", categoria: casino}
+  "🎲": {significato: "dadi casino", categoria: casino}
+  "🃏": {significato: "poker carte casino", categoria: casino}
+  "♠️": {significato: "poker carte", categoria: casino}
+  "🎯": {significato: "pronostico sicuro", categoria: pronostico}
+  "✅": {significato: "vincente confermata", categoria: pronostico, piattaforme: {telegram: "pronostico vincente"}}
+  "🔥": {significato: "imperdibile", categoria: promozione}
+  "🚀": {significato: "moltiplicatore crash", categoria: casino, piattaforme: {telegram: "gioco crash moltiplicatore"}}
+  "📈": {significato: "quota in salita", categoria: pronostico}
+  "🔒": {significato: "partita sicura combine", categoria: frode, piattaforme: {telegram: "partita truccata sicura"}}
+  "💯": {significato: "sicuro al cento per cento", categoria: frode}
+  "🎁": {significato: "bonus regalo", categoria: promozione}
+  "🆓": {significato: "gratis bonus", categoria: promozione}
+  "₿": {significato: "bitcoin", categoria: pagamento}
+  "🪙": {significato: "criptovaluta", categoria: pagamento}
+  "🇮🇹": {significato: "italia", categoria: lingua}

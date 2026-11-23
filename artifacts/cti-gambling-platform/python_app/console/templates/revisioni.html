@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "parti/macro.html" import stato, paginazione %}
+{% block titolo %}Revisione manuale{% endblock %}
+{% block contenuto %}
+<div class="testata"><div><h1>Revisione manuale</h1><p>Le pagine protette da captcha o blocchi arrivano qui. Il sistema non tenta di aggirarli: decide l'analista.</p></div></div>
+<section class="scheda">
+  <div class="filtri"><div class="pastiglie">
+    {% for chiave, nome in [("aperte", "Aperte"), ("mie", "In carico a me"), ("chiuse", "Chiuse")] %}
+    <a class="pastiglia" href="/revisioni?stato={{ chiave }}"{% if filtro == chiave %} aria-current="page"{% endif %}>{{ nome }}</a>{% endfor %}
+  </div></div>
+  {% if righe %}
+  <div class="tabella-contenitore"><table><thead><tr><th>Sito</th><th>Motivo</th><th>Stato</th><th>Assegnata a</th><th>Aperta il</th></tr></thead><tbody>
+  {% for r in righe %}<tr>
+    <td><a href="/revisioni/{{ r.id }}"><strong>{{ r.sito.dominio if r.sito else "—" }}</strong></a></td>
+    <td>{{ MOTIVI.get(r.snapshot.motivo, r.snapshot.motivo) if r.snapshot else r.tipo }}</td>
+    <td>{{ stato(r.stato) }}</td><td>{{ r.assegnatario.nome_utente if r.assegnatario else "—" }}</td><td>{{ r.creata_il|quando }}</td></tr>{% endfor %}
+  </tbody></table></div>
+  {{ paginazione(pag, "/revisioni?stato=" ~ filtro ~ "&") }}
+  {% else %}<div class="vuoto"><h3>Niente da rivedere</h3><p>Qui compaiono le pagine che il sistema non ha potuto leggere.</p></div>{% endif %}
+</section>
+{% endblock %}
