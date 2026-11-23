@@ -1,7 +1,7 @@
 kind = "web"
 previewPath = "/"
 title = "CTI Gambling Intelligence"
-description = "Web platform prototype for managing authorized intelligence sources, collecting and classifying evidence, profiling betting sites and events, calculating provisional trust and fraud indicators, and exporting case data to Excel."
+description = "Portale CTI Softstrategy per acquisire evidenze, confrontarle con gli elenchi ADM, profilare siti ed eventi e scaricare report Excel."
 version = "1.0.0"
 id = "artifacts/cti-gambling-platform"
 router = "path"
@@ -12,17 +12,25 @@ paths = [ "/" ]
 localPort = 18855
 
 [services.development]
-run = "pnpm --filter @workspace/cti-gambling-platform run dev"
+run = "cd python_app && python3.12 -m uvicorn console.app:app --host 0.0.0.0 --port $PORT --proxy-headers"
 
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/cti-gambling-platform", "run", "build" ]
-serve = "static"
-publicDir = "artifacts/cti-gambling-platform/dist/public"
+[services.production.build]
+args = [ "python3.12", "-m", "compileall", "-q", "python_app" ]
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+[services.production.run]
+args = [ "python3.12", "-m", "uvicorn", "console.app:app", "--host", "0.0.0.0", "--port", "18855", "--proxy-headers" ]
+
+[services.production.run.env]
+PORT = "18855"
+BASE_PATH = "/"
+COOKIE_SICURI = "true"
+PYTHONPATH = "python_app"
+
+[services.production.health.startup]
+path = "/salute"
 
 [services.env]
 PORT = "18855"
 BASE_PATH = "/"
+COOKIE_SICURI = "true"
+PYTHONPATH = "python_app"

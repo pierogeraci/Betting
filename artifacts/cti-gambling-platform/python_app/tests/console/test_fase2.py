@@ -6,6 +6,7 @@ def test_probe_pages_and_admin_actions(client, db):
     csrf = login(client)
     page = client.get("/sonde").text
     assert "La lista URL cresce da sola?" in page and "Telegram" in page
+    assert "Worker isolato non collegato" in page
     web = db.query(Sonda).filter(Sonda.nome == "web").one()
     assert (
         client.post(f"/sonde/{web.id}/stato", data={"csrf": csrf}).status_code == 403

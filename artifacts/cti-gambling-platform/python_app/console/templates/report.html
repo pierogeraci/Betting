@@ -16,7 +16,7 @@ table{width:100%;border-collapse:collapse;margin:7px 0 15px;font-size:12.5px}th,
 </style></head>
 <body>
 <article class="report-shell">
-<header class="report-head"><img src="/static/softstrategy-logo.svg" alt="Softstrategy"><div class="nota">REPORT DI INTELLIGENCE<br>Generato il {{ generato_il.strftime("%Y-%m-%d %H:%M") }} UTC<br>Analista {{ autore.nome_utente }} · regole {{ regole.version }}</div></header>
+<header class="report-head"><img src="/static/softstrategy-logo-clean.svg" alt="Softstrategy"><div class="nota">REPORT DI INTELLIGENCE<br>Generato il {{ generato_il.strftime("%Y-%m-%d %H:%M") }} UTC<br>Analista {{ autore.nome_utente }} · regole {{ regole.version }}</div></header>
 <h1>{{ sito.dominio }}</h1>
 <p>Esito ADM: <strong>{{ ESITI_ADM[sito.esito_adm][0] }}</strong>{% if punteggio %} · Trust Index: {% if punteggio.classe_rischio %}<span class="{{ punteggio.classe_rischio }}">rischio {{ punteggio.classe_rischio }} ({{ "%.2f"|format(punteggio.trust_index) }})</span>{% else %}nessun indice{% endif %}{% endif %}
 {% if sito.gruppo %} · gruppo di domini gemelli {{ sito.gruppo }}{% endif %}</p>

@@ -459,7 +459,7 @@ function PublicLanding() {
   if (loading) return <div className="auth-loading" role="status">Verifica della sessione…</div>;
   if (user) return <Redirect to="/dashboard"/>;
   return <main className="auth-landing">
-    <a className="auth-brand" href={`${basePath || ''}/`}><img src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy"/></a>
+    <a className="auth-brand" href={`${basePath || ''}/`}><img src={`${basePath}/softstrategy-logo-clean.svg`} alt="Softstrategy"/></a>
     <div className="auth-landing-content">
       <div className="eyebrow">PIATTAFORMA DI ANALISI CTI</div>
       <h1>Analisi autorizzata.<br/>Evidenze tracciabili.</h1>
@@ -506,7 +506,7 @@ function SignInPage() {
   return <main className="auth-page">
     <Link className="auth-back-link" href="/">← Torna alla pagina iniziale</Link>
     <section className="local-login-card">
-      <img className="local-login-logo" src={`${basePath}/softstrategy-logo.svg`} alt="Softstrategy"/>
+      <img className="local-login-logo" src={`${basePath}/softstrategy-logo-clean.svg`} alt="Softstrategy"/>
       <div className="eyebrow">PIATTAFORMA CTI</div>
       <h1>Accedi alla piattaforma</h1>
       <p>Inserisci le credenziali locali assegnate dall’amministratore.</p>

@@ -2,6 +2,7 @@
 {% block titolo %}Lavori{% endblock %}
 {% block contenuto %}
 <div class="testata"><div><h1>Lavori</h1><p>La coda che collega i moduli. I lavori di raccolta girano nel contenitore isolato; gli altri sulla rete interna.</p></div></div>
+{% if not worker_attivo %}<div class="messaggio avviso"><strong>Worker isolato non collegato.</strong> I lavori di raccolta restano in attesa. Il server web non apre URL, non accede a Tor e non esegue APK.</div>{% endif %}
 <section class="scheda">
   <div class="filtri"><div class="pastiglie">
     <a class="pastiglia" href="/lavori"{% if not filtro %} aria-current="page"{% endif %}>Tutti</a>

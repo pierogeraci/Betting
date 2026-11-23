@@ -40,6 +40,7 @@ class Settings:
     collect_proxy: str
     collect_pages_per_hour: int
     adm_max_age_days: int
+    collection_worker_enabled: bool
 
 
 def _sqlalchemy_url(url: str) -> str:
@@ -72,4 +73,5 @@ def get_settings() -> Settings:
         collect_proxy=_env("RACCOLTA_PROXY"),
         collect_pages_per_hour=int(_env("RACCOLTA_MAX_PAGINE_ORA", "120")),
         adm_max_age_days=int(_env("ADM_GIORNI_VALIDITA", "30")),
+        collection_worker_enabled=_flag("WORKER_RACCOLTA_ABILITATO", False),
     )

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from console.deps import Page, admin_user, csrf_protect, current_user, get_db, open_reviews, redirect, render
 from core import scheduler
+from core.config import get_settings
 from core.domains import InvalidUrl, normalize_url
 from core.models import Avviso, Canale, ElementoGrezzo, ParolaChiave, Sito, Sonda, Utente, utcnow
 
@@ -72,6 +73,7 @@ def probes(request: Request, user: Utente = Depends(current_user), db: Session =
             "conteggi": counts,
             "crescita": growth(db),
             "telegram_acceso": scheduler.telegram_enabled(),
+            "worker_attivo": get_settings().collection_worker_enabled,
             "canali_attivi": db.execute(
                 select(func.count()).select_from(Canale).where(Canale.stato == "attivo")
             ).scalar(),

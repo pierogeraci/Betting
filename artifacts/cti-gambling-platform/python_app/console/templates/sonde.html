@@ -3,6 +3,11 @@
 {% block titolo %}Sonde{% endblock %}
 {% block contenuto %}
 <div class="testata"><div><h1>Sonde</h1><p>Le sonde girano nei contenitori di raccolta, su rete separata, entro i tetti configurati. Solo pagine pubbliche e canali pubblici.</p></div></div>
+{% if worker_attivo %}
+<div class="messaggio ok"><strong>Worker isolato collegato.</strong> Le attività sono inviate ai contenitori di raccolta.</div>
+{% else %}
+<div class="messaggio avviso"><strong>Worker isolato non collegato.</strong> Puoi configurare sonde e fonti, ma i lavori restano in coda: nessuna pagina, canale o APK viene raccolto dal server web.</div>
+{% endif %}
 <div class="griglia c21">
   <section class="scheda"><header><h2>La lista URL cresce da sola?</h2><span class="aiuto">Criterio di uscita della Fase 2: due settimane</span></header>
     <div class="corpo pila">{{ grafico_crescita(crescita) }}

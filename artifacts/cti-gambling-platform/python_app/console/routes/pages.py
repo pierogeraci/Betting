@@ -298,6 +298,7 @@ def jobs(
             "pag": page,
             "filtro": stato,
             "conteggi": _job_counts(db),
+            "worker_attivo": get_settings().collection_worker_enabled,
         },
     )
 

@@ -12,12 +12,6 @@
   <div class="scheda numero"><span class="etichetta">Copertura</span><span class="valore">{{ "%.0f"|format(d.vulnerabilita.copertura * 100) }}%</span>
     <span class="nota">Voci determinate · regole {{ d.versione }}</span></div>
 </div>
-{% if d.minaccia.punteggio is not none and d.trust_index is not none %}
-<div class="formula-trust" role="note" aria-label="Formula del Trust Index">
-  <div><span class="formula-kicker">Formula verificabile · v{{ d.versione }}</span><strong>({{ "%.1f"|format(d.vulnerabilita.punteggio)|replace(".", ",") }} + {{ "%.0f"|format(d.minaccia.punteggio)|replace(".", ",") }}) ÷ 2 = {{ "%.2f"|format(d.trust_index)|replace(".", ",") }}</strong></div>
-  <span class="etichetta-stato {{ 'danger' if d.classe == 'alto' else 'warn' if d.classe == 'medio' else 'ok' }}">Rischio {{ d.classe or "non classificato" }}</span>
-</div>
-{% endif %}
 {% if d.esclusione %}<div class="messaggio {{ 'ok' if d.esclusione.startswith('Concessionario') else 'info' }}">{{ d.esclusione }}</div>{% endif %}
 {% if "adm_senza_titolo" in d.segnalazioni %}<div class="messaggio errore">Segnalazione immediata: il sito espone logo o numero di concessione ADM ma non è nell'elenco dei concessionari.</div>{% endif %}
 {% if punteggi|length > 1 %}<div class="pastiglie">{% for ambito, p in punteggi.items() %}<span class="pastiglia">{{ "Piattaforma" if ambito == "piattaforma" else ambito.replace("gioco:", "") }}: {{ p.classe_rischio or "senza indice" }}</span>{% endfor %}</div>{% endif %}
@@ -47,6 +41,32 @@
   <div class="corpo"><p class="aiuto">Minaccia = media dei voti arrotondata per eccesso × 3. {{ d.minaccia.puntate_usate }} puntate usate su {{ d.minaccia.puntate_totali }}{% if d.minaccia.escluse_valuta %}, {{ d.minaccia.escluse_valuta }} escluse per valuta senza tasso{% endif %}.</p></div>
   {% else %}<div class="corpo"><div class="messaggio info">{{ d.minaccia.motivo }}</div>
     <p class="aiuto">Le puntate arrivano dai riquadri pubblici del sito o da un file caricato nella scheda Puntate.</p></div>{% endif %}
+</section>
+</div>
+
+<div class="griglia c2">
+<section class="scheda"><header><h2>3 · Calcolo del Trust Index</h2><span class="aiuto">Formula del foglio Matrice_Trust_Index</span></header>
+  <div class="corpo pila">
+    <p>Trust Index = (Vulnerabilità + Minaccia) ÷ {{ regole.trust_index.divisore }}.</p>
+    {% if d.minaccia.punteggio is not none and d.trust_index is not none %}
+    <div class="formula-trust" role="note" aria-label="Formula del Trust Index">
+      <div><span class="formula-kicker">Calcolo verificabile · {{ d.versione }}</span><strong>({{ "%.1f"|format(d.vulnerabilita.punteggio)|replace(".", ",") }} + {{ "%.0f"|format(d.minaccia.punteggio)|replace(".", ",") }}) ÷ {{ regole.trust_index.divisore }} = {{ "%.2f"|format(d.trust_index)|replace(".", ",") }}</strong></div>
+    </div>
+    {% else %}<div class="messaggio info">Indice non calcolabile: servono un livello di vulnerabilità determinabile e dati sufficienti sulle puntate.</div>{% endif %}
+  </div>
+</section>
+<section class="scheda"><header><h2>4 · Classificazione del rischio</h2>
+  <span class="etichetta-stato {{ 'danger' if d.classe == 'alto' else 'warn' if d.classe == 'medio' else 'ok' }}">Rischio {{ d.classe or "non classificato" }}</span>
+  </header>
+  <div class="corpo pila">
+    {% set livelli_ti = regole.trust_index.livelli %}
+    <div class="pastiglie">
+      <span class="pastiglia">Basso &lt; {{ livelli_ti[0].sotto }}</span>
+      <span class="pastiglia">Medio {{ livelli_ti[0].sotto }}–{{ livelli_ti[1].fino_a }}</span>
+      <span class="pastiglia">Alto &gt; {{ livelli_ti[1].fino_a }}</span>
+    </div>
+    <p class="aiuto">Soglie configurate con le regole {{ d.versione }}. La classe è assegnata solo quando entrambi i punteggi sono determinabili.</p>
+  </div>
 </section>
 </div>
 {% else %}<div class="scheda"><div class="vuoto"><h3>Nessun punteggio ancora</h3><p>Il punteggio si calcola dopo la profilazione.</p></div></div>{% endif %}

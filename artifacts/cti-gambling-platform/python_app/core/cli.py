@@ -11,18 +11,12 @@ import time
 from sqlalchemy import select, text
 
 from core import adm, queue
+from core.bootstrap import inizializza_portale
 from core.config import get_settings
 from core.db import get_engine, session_scope
 from core.models import Lavoro, Utente
 from core.security import create_user
 from core.storage import get_store
-
-
-def migrate() -> None:
-    from alembic import command
-    from alembic.config import Config
-
-    command.upgrade(Config("alembic.ini"), "head")
 
 
 def wait_for_db(seconds: int = 60) -> None:
@@ -39,19 +33,14 @@ def wait_for_db(seconds: int = 60) -> None:
 
 
 def init() -> None:
-    """Migrazioni, password del ruolo di raccolta, secchi dell'archivio."""
+    """Verifica il database, prepara l'account e le righe iniziali."""
     wait_for_db()
-    migrate()
-    password = os.environ.get("RACCOLTA_DB_PASSWORD", "")
-    if password:
-        with get_engine().begin() as conn:
-            quoted = conn.execute(text("select quote_literal(:p)"), {"p": password}).scalar()
-            conn.execute(text(f"ALTER ROLE raccolta LOGIN PASSWORD {quoted}"))  # noqa: S608
+    inizializza_portale()
     settings = get_settings()
     store = get_store()
     for bucket in (settings.s3_archive_bucket, settings.s3_inbox_bucket, settings.s3_work_bucket):
         store.ensure_bucket(bucket)
-    print("Inizializzazione completata.")
+    print("Inizializzazione completata; lo schema PostgreSQL è gestito da Drizzle.")
 
 
 def add_user(args: argparse.Namespace) -> None:
@@ -72,7 +61,7 @@ def seed_admin() -> None:
             print("Il portale ha già un account; nessun account è stato modificato.")
             return
         user = create_user(session, username, password, role="amministratore")
-        print(f"Creato l'account amministratore iniziale: {user.nome_utente}.")
+        print("Creato l'account amministratore iniziale.")
 
 
 def enqueue_probe(args: argparse.Namespace) -> None:
@@ -147,7 +136,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="core.cli")
     sub = parser.add_subparsers(dest="comando", required=True)
     sub.add_parser("init")
-    sub.add_parser("migrate")
     sub.add_parser("seed-admin")
     user = sub.add_parser("crea-utente")
     user.add_argument("nome_utente")
@@ -163,7 +151,6 @@ def main() -> None:
     try:
         {
             "init": lambda a: init(),
-            "migrate": lambda a: migrate(),
             "seed-admin": lambda a: seed_admin(),
             "crea-utente": add_user,
             "accoda-sonda": enqueue_probe,
